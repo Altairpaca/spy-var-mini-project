@@ -29,6 +29,7 @@ def parse_common_args(description: str) -> argparse.Namespace:
     p.add_argument("--data", default=None, help="覆盖数据文件路径（测试/合成数据用）")
     p.add_argument("--workers", type=int, default=None, help="覆盖并行 worker 数")
     p.add_argument("--out-root", default="outputs", help="输出根目录")
+    p.add_argument("--docs-dir", default=None, help="冻结清单文档目录（默认仓库 docs/）")
     return p.parse_args()
 
 

@@ -21,7 +21,12 @@ from spyvar.freeze import write_freeze_manifest
 
 def main() -> None:
     args = parse_common_args("final-test 冻结")
+    parser_extra = None  # parse_common_args 已处理 --config/--data/--workers/--out-root
+    docs_dir = getattr(args, "docs_dir", None)
     cfg = resolve_config(args)
+    if docs_dir is None:
+        # 未显式指定时使用仓库 docs/（正式冻结）；测试传入临时目录避免污染
+        docs_dir = str(ROOT / "docs")
     if not Path(cfg.data_path).exists():
         sys.exit(f"数据文件不存在: {cfg.data_path}")
     if cfg.primary_window is None:
@@ -44,7 +49,7 @@ def main() -> None:
         seeds=seeds,
         evaluation_metrics=metrics,
         final_test_start=cfg.final_test_start,
-        output_path=Path("docs"),
+        output_path=Path(docs_dir),
     )
     # 机器可读副本（gate 检查用）
     import json

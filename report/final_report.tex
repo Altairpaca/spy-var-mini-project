@@ -222,7 +222,7 @@ At the 5\% tail, the best-calibrated model is HS (failure rate 0.0530 vs target 
 
 At the 10\% tail, the best-calibrated model is HS (failure rate 0.0962 vs target 0.10); the lowest mean pinball loss is achieved by GJR-t (0.00205).
 
-The GARCH family (GARCH-t, GJR-t) delivers the best overall calibration and sharpness across all three tails, with no evidence of violation clustering and materially better crisis-period coverage than historical simulation (5\% failure rate 6.4\% vs 15.7\% in 2008--2009).
+The GARCH family (GARCH-t, GJR-t) achieves the lowest mean pinball loss (sharpness) at all three tails and the best tail calibration among conditional-volatility models, with no evidence of violation clustering at the 1% and 5% tails. Two calibration caveats: at the 5% and 10% tails the empirical failure rate of historical simulation is marginally closer to target (at the cost of far worse crisis-period coverage, e.g. 5% failure rate 15.7% vs 6.4% in 2008--2009), and the 10% conditional-coverage test is rejected for the GARCH family (CC p $<$ 0.01), so the GARCH calibration advantage is strongest at the extreme 1% tail.
 
 The neural models do not outperform the classical baselines on this frozen panel: the MLP is significantly worse than both GARCH-t and the linear quantile model on the DM test at all tails (p $<$ 0.001), and the GRU is strongly over-conservative at the 1\% tail (failure rate 0.15\%). Seed robustness is high (small across-seed dispersion), so the primary-seed result is representative. This is a valid negative result: on this information set and window, nonlinear mapping does not add value.
 

@@ -37,7 +37,8 @@ def smoke_env(tmp_path):
 def _run(script: str, cfg: str, data: str, out: str) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(ROOT / "scripts" / script),
-         "--config", cfg, "--data", data, "--out-root", out],
+         "--config", cfg, "--data", data, "--out-root", out,
+         "--docs-dir", str(Path(out).parent / "docs")],
         capture_output=True, text=True, cwd=ROOT, timeout=600, check=False,
     )
 

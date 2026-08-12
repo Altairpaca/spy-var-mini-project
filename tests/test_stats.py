@@ -37,6 +37,47 @@ def test_kupiec_degenerate_cases():
     assert lrn == pytest.approx(-2.0 * 500 * np.log(0.05), rel=1e-12)
 
 
+def test_nw_variance_matches_known_value():
+    """Newey-West 方差手算对照（Bartlett 核，lag=1）。"""
+    rng = np.random.default_rng(21)
+    d = rng.standard_normal(50)
+    d = d - d.mean()
+    gamma0 = np.dot(d, d) / len(d)
+    gamma1 = np.dot(d[1:], d[:-1]) / len(d)
+    var = gamma0 + 2.0 * (1.0 - 1.0 / 2.0) * gamma1
+    from spyvar.evaluation.backtests import _nw_variance
+
+    assert _nw_variance(d + d.mean(), max_lag=1) == pytest.approx(var, rel=1e-10)
+
+
+def test_block_bootstrap_centered_statistic():
+    """中心化：bootstrap 分布围绕原假设 0（无差异数据下 p 值均匀）。"""
+    from spyvar.evaluation.backtests import block_bootstrap_pvalue
+
+    rng = np.random.default_rng(22)
+    pvals = []
+    for _ in range(30):
+        loss = rng.exponential(1.0, 300)
+        out = block_bootstrap_pvalue(loss, loss.copy(), B=99, block=20, seed=1)
+        pvals.append(out["pvalue"])
+    assert np.mean(pvals) > 0.2  # 无差异时不应系统性拒绝
+
+
+def test_dq_test_edge_cases():
+    """DQ 边界：样本不足返回 NaN。"""
+    dq, p = dq_test(np.array([1.0, 0.0, 1.0]), 0.05, np.full(3, -1.0), lags=4)
+    assert np.isnan(dq) and np.isnan(p)
+
+
+def test_dm_test_rejects_constant_difference():
+    """DM：确定性常数差异应被检测。"""
+    rng = np.random.default_rng(23)
+    base = rng.exponential(1.0, 400)
+    out = dm_test(base, base + 0.5)
+    assert out["dm_stat"] < -5
+    assert out["pvalue"] < 0.001
+
+
 def test_kupiec_rejects_perfect_coverage():
     """在 5% 水平违例率 15% 时，LR_uc 应显著。"""
     _, p = kupiec_lr(150, 1000, 0.05)
