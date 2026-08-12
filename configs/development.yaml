@@ -82,7 +82,7 @@ neural_search:
     patience: [30]
 
 parallel:
-  workers: 16
+  workers: 32
 
 evaluation:
   regimes:
