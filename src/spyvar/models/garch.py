@@ -27,8 +27,12 @@ class GARCHFamily(Model):
 
     def fit(self, window: WindowData) -> QuantileForecast:
         y = window.returns
+        # 手动缩放：arch 优化器在 0.01 量级收益上数值病态（DataScaleWarning），
+        # 而 arch 7.2.0 的 rescale=True 不会把 forecast 换算回原始尺度。
+        # 因此缩放 100 倍拟合，预测时换算回原始尺度（保守、可审计）。
+        scale = 100.0
         res = arch_model(
-            y,
+            y * scale,
             mean="Constant",
             vol=self._vol,
             p=1,
@@ -41,12 +45,12 @@ class GARCHFamily(Model):
         else:
             status = "ok"
         var1 = float(res.forecast(horizon=1, reindex=False).variance.iloc[0, 0])
-        sigma = np.sqrt(max(var1, 1e-16))
+        sigma = np.sqrt(max(var1, 1e-16)) / scale
         # 数值合理性：一步波动率远超窗口无条件波动率 => 拟合爆炸，弃用该预测
-        scale = float(np.sqrt(np.mean(y**2)))
-        if sigma > 50.0 * max(scale, 1e-12):
+        window_scale = float(np.sqrt(np.mean(y**2)))
+        if sigma > 50.0 * max(window_scale, 1e-12):
             status = "exploded"
-        mu = float(res.params["mu"])
+        mu = float(res.params["mu"]) / scale
         if self._dist in ("t", "students-t"):
             nu = float(res.params["nu"])
             q = mu + sigma * stats.t.ppf([0.01, 0.05, 0.10], nu)
