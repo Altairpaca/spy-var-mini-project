@@ -75,6 +75,16 @@ def test_sha256_stable_and_changes_with_content(tmp_path):
     assert sha256_file(p) != h1
 
 
+def test_headerless_date_column(tmp_path):
+    """兼容日期列无表头（Unnamed: 0）的真实文件格式。"""
+    df = make_synthetic_spy(n=60)
+    out = pd.DataFrame({"": df["date"], "log_ret": df["log_ret"], "rv5": df["rv5"], "bv": df["bv"]})
+    p = _write_csv(tmp_path, out)
+    loaded = load_spy_data(p)
+    assert len(loaded) == 60
+    assert loaded.index.is_monotonic_increasing
+
+
 def test_load_does_not_modify_file(tmp_path):
     df = make_synthetic_spy(n=60)
     p = _write_csv(tmp_path, df)

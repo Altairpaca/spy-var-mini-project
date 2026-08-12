@@ -44,6 +44,17 @@ def load_spy_data(path: str | Path) -> pd.DataFrame:
         raise DataValidationError(f"数据文件无法解析: {p}: {e}") from e
 
     missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
+    if "date" in missing:
+        # 兼容日期列无表头的格式（第一列为日期但列名为空/Unnamed: 0）
+        candidates = [c for c in df.columns if str(c).startswith("Unnamed") or str(c).strip() == ""]
+        for cand in candidates:
+            try:
+                pd.to_datetime(df[cand], errors="raise")
+            except Exception:  # noqa: BLE001
+                continue
+            df = df.rename(columns={cand: "date"})
+            missing.remove("date")
+            break
     if missing:
         raise DataValidationError(f"数据缺少必需列 {missing}; 实际列: {list(df.columns)}")
 
