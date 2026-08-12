@@ -40,3 +40,6 @@ report/*.toc
 
 # Agent/local state
 .omo/
+
+# 用户提供的原始压缩包（数据已在 data/raw/ 解压）
+PhD_Interview.zip
