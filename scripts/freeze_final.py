@@ -44,12 +44,20 @@ def main() -> None:
         seeds=seeds,
         evaluation_metrics=metrics,
         final_test_start=cfg.final_test_start,
-        output_path=Path(args.out_root) / "manifests",
+        output_path=Path("docs"),
+    )
+    # 机器可读副本（gate 检查用）
+    import json
+
+    out_manifest = Path(args.out_root) / "manifests"
+    out_manifest.mkdir(parents=True, exist_ok=True)
+    (out_manifest / "freeze.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     print("冻结完成:")
     for k in ("git_commit", "config_sha256", "data_sha256", "primary_window"):
         print(f"  {k}: {manifest[k]}")
-    print(f"  manifest -> {Path(args.out_root) / 'manifests' / 'FREEZE_MANIFEST.md'}")
+    print(f"  manifest -> docs/FREEZE_MANIFEST.md")
 
 
 if __name__ == "__main__":

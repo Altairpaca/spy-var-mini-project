@@ -90,7 +90,10 @@ def main() -> None:
         tbl = pd.DataFrame([r for r in all_rows if r["model_id"] == model_id])
         best_row = tbl.loc[tbl["pinball_mean"].idxmin()]
         best_by_model[model_id] = {
-            "best": {k: v for k, v in best_row.items() if k in search[model_id]},
+            "best": {
+                k: (v.item() if hasattr(v, "item") else v)
+                for k, v in best_row.items() if k in search[model_id]
+            },
             "pinball_mean": float(best_row["pinball_mean"]),
         }
         print(f"  BEST {model_id}: {best_by_model[model_id]}")
