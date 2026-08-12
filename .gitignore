@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environments
+.venv/
+venv/
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local raw data and generated outputs
+# Keep assignment data local unless explicitly approved for repository storage.
+data/raw/*
+!data/raw/.gitkeep
+outputs/*
+!outputs/.gitkeep
+
+# Large model/checkpoint artifacts
+*.pt
+*.pth
+*.ckpt
+
+# Report build artifacts
+report/*.aux
+report/*.log
+report/*.out
+report/*.toc

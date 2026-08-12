@@ -47,4 +47,3 @@ The exact final specification must be frozen in `EXPERIMENT_SPEC.md` before the 
 Primary development and experiment environment: `altair-server` (Linux, 256 CPU cores, 128 GB RAM, RTX 3060), because Codex is directly usable there. The project is small enough that the RTX 3060 is more than sufficient; most rolling classical fits are CPU-bound.
 
 See `ENVIRONMENT.md` for execution rules.
-# spy-var-mini-project
