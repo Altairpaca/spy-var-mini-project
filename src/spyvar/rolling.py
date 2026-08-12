@@ -119,6 +119,9 @@ def _fit_one(
         qs = np.array([row["q_001"], row["q_005"], row["q_010"]])
         if not np.isfinite(qs).all():
             row["fit_status"] = "nan_output"
+        if row["fit_status"] != "ok":
+            # 失败预测置 NaN：不参与指标计算，但行保留（日期集完整、失败可见）
+            row["q_001"] = row["q_005"] = row["q_010"] = np.nan
     except Exception as e:  # noqa: BLE001 —— 失败必须记录，绝不静默
         row["q_001"] = row["q_005"] = row["q_010"] = np.nan
         row["fit_status"] = f"failed:{type(e).__name__}:{e}"
@@ -140,12 +143,14 @@ def run_rolling(
     seed: int,
     model_config: dict[str, Any],
     feature_names: list[str] | None = None,
+    feature_set_label: str | None = None,
     workers: int = 1,
 ) -> pd.DataFrame:
     """对给定原点列表运行统一滚动预测，返回宽表 DataFrame。
 
     origin_positions 为 df 中的整数位置；模型结果与实现收益
-    均在此对齐。workers=1 时串行（保证确定性顺序）。
+    均在此对齐。feature_set_label 为特征集名称（如 F3），
+    缺失时回退为特征名 join。
     """
     t0 = time.perf_counter()
     fn = delayed(_fit_one)
@@ -156,7 +161,10 @@ def run_rolling(
     rows = Parallel(n_jobs=workers, prefer="processes")(fn(*a) for a in args)
     panel = pd.DataFrame(rows)
     panel.insert(0, "model_id", model_factory().model_id)
-    panel.insert(1, "feature_set", "none" if feature_names is None else "|".join(feature_names))
+    if feature_set_label is not None:
+        panel.insert(1, "feature_set", feature_set_label)
+    else:
+        panel.insert(1, "feature_set", "none" if feature_names is None else "|".join(feature_names))
     panel.insert(2, "window", window)
     panel.insert(3, "seed", seed)
     panel.attrs["runtime_seconds"] = time.perf_counter() - t0

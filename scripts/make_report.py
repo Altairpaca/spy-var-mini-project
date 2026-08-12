@@ -75,23 +75,22 @@ def _dm_latex(dm: pd.DataFrame) -> str:
             f"{r['model_a']} vs {r['model_b']} & {int(r['tail']*100)}\\% & {_fmt(r['dm_stat'])} & "
             f"{_fmt(r['dm_pvalue'])} & {_fmt(r['bootstrap_pvalue'])} & {r['favors']}\\\\\n"
         )
-    return "\\begin{tabular}{llrrrl}\n\\textbf{Pair} & \\textbf{Tail} & \\textbf{DM} & "
-    "\\textbf{DM p} & \\textbf{Boot p} & \\textbf{Favors}\\\\\n" + "".join(rows) + "\\end{tabular}"
+    return ("\\begin{tabular}{llrrrl}\n\\textbf{Pair} & \\textbf{Tail} & \\textbf{DM} & "
+    "\\textbf{DM p} & \\textbf{Boot p} & \\textbf{Favors}\\\\\n" + "".join(rows) + "\\end{tabular}")
 
 
 def _regime_latex(regime: pd.DataFrame, primary: dict) -> str:
     m = regime.copy()
     m = m[m.apply(lambda r: primary.get(r["model"]) == r["feature_set"], axis=1)]
     m["model"] = m["model"].map({"M0": "HS", "M1": "GARCH-t", "M2": "LinQR", "M3": "MLP", "M4": "GJR-t", "M5": "GRU"})
+    m = m[m["tail"] == 0.05]
+    pivot = m.pivot_table(index="regime", columns="model", values="failure_rate")
+    labels = " & ".join(pivot.columns)
     rows = []
-    for reg in m["regime"].unique():
-        sub = m[m["regime"] == reg]
-        cells = " & ".join(f"{_fmt(v)}" for v in sub["failure_rate"].tolist())
-        rows.append(f"{reg} & {cells}\\\\\n")
-    labels = " & ".join(m["model"].unique())
-    return "\\begin{tabular}{l" + "r" * len(m["model"].unique()) + "}\n\\textbf{Regime} & " + labels + "\\\\\n" + "".join(rows) + "\\end{tabular}"
-
-
+    for reg in pivot.index:
+        cells = " & ".join(f"{_fmt(v)}" for v in pivot.loc[reg])
+        rows.append(reg.replace(chr(95), chr(92) + chr(95)) + " & " + cells + chr(92) + chr(92) + chr(10))
+    return chr(92) + "begin{tabular}{l" + "r" * len(pivot.columns) + "}" + chr(10) + chr(92) + "textbf{Regime} & " + labels + chr(92) + chr(92) + chr(10) + "".join(rows) + chr(92) + "end{tabular}"
 def build_latex(cfg, out_root: Path, freeze: dict | None, audit: dict | None) -> str:
     metrics = pd.read_csv(out_root / "tables" / "metrics.csv")
     dm = pd.read_csv(out_root / "tables" / "dm_comparison.csv")

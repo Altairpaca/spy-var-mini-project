@@ -146,20 +146,19 @@ def main() -> None:
     # regime 分段
     regimes = cfg.regimes
     reg_rows = []
-    labels = regime_labels(panels["target_date"], regimes)
     for (model, fset), g in panels.groupby(["model_id", "feature_set"]):
+        g_labels = regime_labels(g["target_date"], regimes).to_numpy()
         for alpha in cfg.tails:
-            for reg, mask in labels.groupby(labels).groups.items():
-                idx = g.index.intersection(mask)
-                if len(idx) < 20:
+            for reg in regimes:
+                sel = g[g_labels == reg]
+                if len(sel) < 20:
                     continue
-                gg = g.loc[idx]
-                v = gg[violation_col(alpha)].to_numpy(dtype=float)
-                y = gg["realized_log_ret"].to_numpy(dtype=float)
-                q = gg[q_col(alpha)].to_numpy(dtype=float)
+                v = sel[violation_col(alpha)].to_numpy(dtype=float)
+                y = sel["realized_log_ret"].to_numpy(dtype=float)
+                q = sel[q_col(alpha)].to_numpy(dtype=float)
                 reg_rows.append({
                     "model": model, "feature_set": fset, "tail": alpha,
-                    "regime": reg, "n": len(gg),
+                    "regime": reg, "n": len(sel),
                     "failure_rate": float(np.nanmean(v)) if len(v) else np.nan,
                     "mean_pinball": pinball_loss(y, q, alpha),
                 })
@@ -199,6 +198,7 @@ def main() -> None:
                 loss_b = yb - qb
                 la = loss_a * (alpha - (loss_a < 0))
                 lb = loss_b * (alpha - (loss_b < 0))
+                valid = np.isfinite(la) & np.isfinite(lb)
                 dm = dm_test(la, lb)
                 bb = block_bootstrap_pvalue(la, lb, B=boot_cfg["B"], block=boot_cfg["block"])
                 cmp_rows.append({
@@ -206,8 +206,8 @@ def main() -> None:
                     "n": dm["n"],
                     "dm_stat": dm["dm_stat"], "dm_pvalue": dm["pvalue"],
                     "bootstrap_pvalue": bb["pvalue"],
-                    "pinball_a": float(la.mean()), "pinball_b": float(lb.mean()),
-                    "favors": "a" if float(la.mean()) < float(lb.mean()) else "b",
+                    "pinball_a": float(la[valid].mean()), "pinball_b": float(lb[valid].mean()),
+                    "favors": "a" if float(la[valid].mean()) < float(lb[valid].mean()) else "b",
                 })
     pd.DataFrame(cmp_rows).to_csv(out_root / "tables" / "dm_comparison.csv", index=False)
 

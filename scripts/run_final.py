@@ -43,6 +43,14 @@ FINAL_MODELS = [
 ]
 
 
+def _enabled_final_models(cfg) -> list[tuple[str, str]]:
+    """按配置 enabled 过滤的最终模型矩阵（真实流程全部显式启用）。"""
+    return [
+        (m, f) for m, f in FINAL_MODELS
+        if cfg.models.get(m, {}).get("enabled", False)
+    ]
+
+
 def main() -> None:
     args = parse_common_args("冻结 final test")
     cfg = resolve_config(args)
@@ -57,7 +65,7 @@ def main() -> None:
           f"({df.index[origins[0]].date()} -> {df.index[origins[-1] + 1].date()})")
     out_root = Path(args.out_root)
     (out_root / "predictions").mkdir(parents=True, exist_ok=True)
-    for model_id, fset in FINAL_MODELS:
+    for model_id, fset in _enabled_final_models(cfg):
         exp_id = f"final-{model_id}-{fset}-w{cfg.primary_window}-s{cfg.primary_seed}"
         out_path = out_root / "predictions" / f"{exp_id}.parquet"
         if out_path.exists():

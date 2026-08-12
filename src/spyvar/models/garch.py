@@ -35,13 +35,17 @@ class GARCHFamily(Model):
             o=self._o,
             q=1,
             dist=self._dist,
-        ).fit(disp="off")
+        ).fit(disp="off", options={"maxiter": 1000})
         if res.convergence_flag != 0:
             status = f"non_convergence:{res.convergence_flag}"
         else:
             status = "ok"
         var1 = float(res.forecast(horizon=1, reindex=False).variance.iloc[0, 0])
         sigma = np.sqrt(max(var1, 1e-16))
+        # 数值合理性：一步波动率远超窗口无条件波动率 => 拟合爆炸，弃用该预测
+        scale = float(np.sqrt(np.mean(y**2)))
+        if sigma > 50.0 * max(scale, 1e-12):
+            status = "exploded"
         mu = float(res.params["mu"])
         if self._dist in ("t", "students-t"):
             nu = float(res.params["nu"])

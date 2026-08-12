@@ -67,7 +67,7 @@ def main() -> None:
         if args.workers:
             cmd += ["--workers", str(args.workers)]
         print(f"\n===== [{stage}] {' '.join(cmd)} =====")
-        r = subprocess.run(cmd, cwd=Path(__file__).parent.parent)
+        r = subprocess.run(cmd, cwd=Path(__file__).parent.parent, check=False)
         if r.returncode != 0:
             sys.exit(f"阶段 {stage} 失败 (exit {r.returncode})")
     print("\n全部阶段完成。")

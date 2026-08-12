@@ -97,7 +97,7 @@ def run_experiment(
     panel = run_rolling(
         df, factory, origins, window, cfg.tails, seed,
         cfg.models.get(model_id, {}), feature_names=names,
-        workers=cfg.workers,
+        feature_set_label=feature_set, workers=cfg.workers,
     )
     panel.insert(0, "experiment_id", experiment_id)
     manifest = make_manifest(

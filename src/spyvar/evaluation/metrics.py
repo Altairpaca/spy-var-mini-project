@@ -64,10 +64,15 @@ def violation_runs(violations: np.ndarray) -> dict[str, float]:
     }
 
 
-def regime_labels(dates: pd.DatetimeIndex, regimes: dict[str, tuple[str, str]]) -> pd.Series:
-    """按预定义日期区间标记 regime（区间互斥，按配置顺序首个命中）。"""
-    out = pd.Series("outside", index=dates, dtype=object)
+def regime_labels(dates, regimes: dict[str, tuple[str, str]]) -> pd.Series:
+    """按预定义日期区间标记 regime（区间互斥，按配置顺序首个命中）。
+
+    dates 可为 DatetimeIndex 或含日期列的 Series；返回 Series 的
+    索引与输入对齐。
+    """
+    dts = dates if isinstance(dates, pd.DatetimeIndex) else pd.DatetimeIndex(dates)
+    out = pd.Series("outside", index=dts)
     for name, (start, end) in regimes.items():
-        mask = (dates >= pd.Timestamp(start)) & (dates <= pd.Timestamp(end))
+        mask = (dts >= pd.Timestamp(start)) & (dts <= pd.Timestamp(end))
         out[mask] = name
     return out

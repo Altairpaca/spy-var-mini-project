@@ -13,7 +13,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import numpy as np
 import pandas as pd
 
 from scripts.common import (
@@ -22,7 +21,6 @@ from scripts.common import (
     parse_common_args,
     resolve_config,
 )
-
 from spyvar.models.historical import HistoricalSimulation
 from spyvar.models.linear_qr import LinearQuantile
 from spyvar.rolling import run_rolling

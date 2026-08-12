@@ -38,7 +38,7 @@ def _run(script: str, cfg: str, data: str, out: str) -> subprocess.CompletedProc
     return subprocess.run(
         [sys.executable, str(ROOT / "scripts" / script),
          "--config", cfg, "--data", data, "--out-root", out],
-        capture_output=True, text=True, cwd=ROOT, timeout=600,
+        capture_output=True, text=True, cwd=ROOT, timeout=600, check=False,
     )
 
 
