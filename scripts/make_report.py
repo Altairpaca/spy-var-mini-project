@@ -207,20 +207,20 @@ The conclusion is drawn from the frozen out-of-sample evidence in Section~\ref{s
 
 \section{References}
 \begin{itemize}
-\item Kupiec, P. (1995). Techniques for Verifying the Accuracy of Risk Measurement Models. \emph{Journal of Derivatives}, 3(2), 73--84.
-\item Christoffersen, P. (1998). Evaluating Interval Forecasts. \emph{International Economic Review}, 39(4), 841--862.
-\item Engle, R. (1982). Autoregressive Conditional Heteroscedasticity with Estimates of the Variance of United Kingdom Inflation. \emph{Econometrica}, 50(4), 987--1007.
-\item Bollerslev, T. (1986). Generalized Autoregressive Conditional Heteroskedasticity. \emph{Journal of Econometrics}, 31(3), 307--327.
-\item Glosten, L., Jagannathan, R., Runkle, D. (1993). On the Relation between the Expected Value and the Volatility of the Nominal Excess Return on Stocks. \emph{Journal of Finance}, 48(5), 1779--1801.
-\item Koenker, R., Bassett, G. (1978). Regression Quantiles. \emph{Econometrica}, 46(1), 33--50.
-\item Engle, R., Manganelli, S. (2004). CAViaR: Conditional Autoregressive Value at Risk by Regression Quantiles. \emph{Journal of Business \& Economic Statistics}, 22(4), 367--381.
-\item Andersen, T., Bollerslev, T., Diebold, F., Labys, P. (2003). Modeling and Forecasting Realized Volatility. \emph{Econometrica}, 71(2), 579--625.
-\item Barndorff-Nielsen, O., Shephard, N. (2004). Power and Bipower Variation with Stochastic Volatility and Jumps. \emph{Journal of Financial Econometrics}, 2(1), 1--37.
-\item Corsi, F. (2009). A Simple Approximate Long-Memory Model of Realized Volatility. \emph{Journal of Financial Econometrics}, 7(2), 174--196.
-\item Diebold, F., Mariano, R. (1995). Comparing Predictive Accuracy. \emph{Journal of Business \& Economic Statistics}, 13(3), 253--263.
-\item Koenker, R. (2005). \emph{Quantile Regression}. Cambridge University Press.
-\item Taylor, J. (2000). A Quantile Regression Neural Network Approach to Estimating the Conditional Density of Multiperiod Returns. \emph{Journal of Forecasting}, 19(4), 299--311.
-\item Patton, A., Sheppard, K. (2015). Good Volatility, Bad Volatility: Signed Jumps and the Persistence of Volatility. \emph{Review of Economics and Statistics}, 97(3), 683--697.
+\item Kupiec, P. (1995). Techniques for Verifying the Accuracy of Risk Measurement Models. \emph{Journal of Derivatives}, 3(2), 73--84. DOI: 10.3905/jod.1995.407942
+\item Christoffersen, P. (1998). Evaluating Interval Forecasts. \emph{International Economic Review}, 39(4), 841--862. DOI: 10.2307/2527341
+\item Engle, R. (1982). Autoregressive Conditional Heteroscedasticity with Estimates of the Variance of United Kingdom Inflation. \emph{Econometrica}, 50(4), 987--1007. DOI: 10.2307/1912773
+\item Bollerslev, T. (1986). Generalized Autoregressive Conditional Heteroskedasticity. \emph{Journal of Econometrics}, 31(3), 307--327. DOI: 10.1016/0304-4076(86)90063-1
+\item Glosten, L., Jagannathan, R., Runkle, D. (1993). On the Relation between the Expected Value and the Volatility of the Nominal Excess Return on Stocks. \emph{Journal of Finance}, 48(5), 1779--1801. DOI: 10.1111/j.1540-6261.1993.tb05128.x
+\item Koenker, R., Bassett, G. (1978). Regression Quantiles. \emph{Econometrica}, 46(1), 33--50. DOI: 10.2307/1913643
+\item Engle, R., Manganelli, S. (2004). CAViaR: Conditional Autoregressive Value at Risk by Regression Quantiles. \emph{Journal of Business \& Economic Statistics}, 22(4), 367--381. DOI: 10.1198/073500104000000370
+\item Andersen, T., Bollerslev, T., Diebold, F., Labys, P. (2003). Modeling and Forecasting Realized Volatility. \emph{Econometrica}, 71(2), 579--625. DOI: 10.1111/1468-0262.00418
+\item Barndorff-Nielsen, O., Shephard, N. (2004). Power and Bipower Variation with Stochastic Volatility and Jumps. \emph{Journal of Financial Econometrics}, 2(1), 1--37. DOI: 10.1093/jjfinec/nbh001
+\item Corsi, F. (2009). A Simple Approximate Long-Memory Model of Realized Volatility. \emph{Journal of Financial Econometrics}, 7(2), 174--196. DOI: 10.1093/jjfinec/nbp001
+\item Diebold, F., Mariano, R. (1995). Comparing Predictive Accuracy. \emph{Journal of Business \& Economic Statistics}, 13(3), 253--263. DOI: 10.1080/07350015.1995.10524599
+\item Koenker, R. (2005). \emph{Quantile Regression}. Cambridge University Press. DOI: 10.1017/CBO9780511754098
+\item Taylor, J. (2000). A Quantile Regression Neural Network Approach to Estimating the Conditional Density of Multiperiod Returns. \emph{Journal of Forecasting}, 19(4), 299--311. DOI: 10.1002/1099-131X(200007)19:4<299::AID-FOR775>3.0.CO;2-V
+\item Patton, A., Sheppard, K. (2015). Good Volatility, Bad Volatility: Signed Jumps and the Persistence of Volatility. \emph{Review of Economics and Statistics}, 97(3), 683--697. DOI: 10.1162/REST\_a\_00503
 \end{itemize}
 
 \appendix
