@@ -50,7 +50,7 @@ def load_spy_data(path: str | Path) -> pd.DataFrame:
         for cand in candidates:
             try:
                 pd.to_datetime(df[cand], errors="raise")
-            except Exception:  # noqa: BLE001
+            except (TypeError, ValueError):
                 continue
             df = df.rename(columns={cand: "date"})
             missing.remove("date")
