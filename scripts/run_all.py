@@ -30,13 +30,14 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
-ALL_STAGES = ["audit", "dev", "search", "select", "freeze", "final", "robust", "eval", "figures", "report"]
+ALL_STAGES = ["audit", "dev", "search", "select", "update", "freeze", "final", "robust", "eval", "figures", "report"]
 
 STAGE_SCRIPT = {
     "audit": "scripts/audit_data.py",
     "dev": "scripts/run_development.py",
     "search": "scripts/neural_search.py",
     "select": "scripts/select_window.py",
+    "update": "scripts/update_final_config.py",
     "freeze": "scripts/freeze_final.py",
     "final": "scripts/run_final.py",
     "robust": "scripts/seed_robustness.py",

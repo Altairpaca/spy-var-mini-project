@@ -29,8 +29,9 @@ def main() -> None:
     args = p.parse_args()
 
     out_root = Path(args.out_root)
-    win_dec = json.loads((out_root / "tables" / "window_decision.json").read_text())
-    search_dec = json.loads((out_root / "tables" / "neural_search_decision.json").read_text())
+    dev_dir = out_root / "development"
+    win_dec = json.loads((dev_dir / "window_decision.json").read_text())
+    search_dec = json.loads((dev_dir / "neural_search_decision.json").read_text())
     cfg_path = Path(args.config)
     raw = yaml.safe_load(cfg_path.read_text())
 

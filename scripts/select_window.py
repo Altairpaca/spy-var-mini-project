@@ -1,10 +1,18 @@
-"""development 窗口选择：从 dev 面板计算 1000 vs 1500 对比表。
+"""Development window selection with equal-weight normalized aggregation.
 
-决策规则（预先声明，development 证据驱动）：
-- 主指标：三个 tail 的 mean pinball loss 之和（窗口内取较小者）；
-- 并列（差异 < 1% 相对差）时选 1500 —— 长窗口对 1% tail
-  有效尾部样本更多、经验分位数更稳定（报告中论证）；
-- 覆盖率（|failure_rate - alpha|）作为诊断展示，不作主规则。
+Audit fix (2026-08-13): summing raw pinball losses biased toward tails with
+larger loss scale and toward models with more feature configurations. New
+aggregation, computed per (model, feature-set, tail):
+
+  norm_loss(w) = loss(w) / mean(loss over candidates)   (candidate-relative)
+
+then the equal-weight average across all (model, feature-set, tail) cells.
+Reported alongside: per-cell winner, pairwise win count, and sensitivity
+(drop-one-cell). Candidates stay {1000, 1500} (no third window). If the two
+summaries disagree, the uncertainty is recorded and the conservative choice
+(longer window at the 1% tail) is taken.
+
+Development-only evidence; the final test is never consulted.
 """
 
 from __future__ import annotations
@@ -24,22 +32,18 @@ from scripts.common import parse_common_args, q_col, resolve_config, violation_c
 from spyvar.evaluation.metrics import pinball_loss
 
 
-def _model_label(model_id: str, fset: str) -> str:
-    return f"{model_id}-{fset}"
-
-
 def collect_dev_panels(out_root: Path) -> pd.DataFrame:
     pred_dir = out_root / "predictions"
     frames = []
     for p in sorted(pred_dir.glob("dev-*.parquet")):
         frames.append(pd.read_parquet(p))
     if not frames:
-        sys.exit(f"没有 dev 预测面板: {pred_dir}")
+        sys.exit(f"no dev prediction panels under {pred_dir}")
     return pd.concat(frames, ignore_index=True)
 
 
 def main() -> None:
-    args = parse_common_args("development 窗口选择")
+    args = parse_common_args("development window selection")
     cfg = resolve_config(args)
     panels = collect_dev_panels(Path(args.out_root))
     rows = []
@@ -61,32 +65,69 @@ def main() -> None:
             })
     tbl = pd.DataFrame(rows)
     out_root = Path(args.out_root)
-    (out_root / "tables").mkdir(parents=True, exist_ok=True)
-    tbl.to_csv(out_root / "tables" / "window_comparison.csv", index=False)
+    dev_dir = out_root / "development"
+    dev_dir.mkdir(parents=True, exist_ok=True)
+    tbl.to_csv(dev_dir / "window_selection.csv", index=False)
 
-    # 主规则：公共模型集（M0/M1/M2 各特征集）的 pinball 之和
-    common_models = tbl.groupby(["window", "model", "feature_set"]).size().reset_index()
-    n_models_per_window = common_models.groupby("window").size()
-    usable = n_models_per_window[n_models_per_window == n_models_per_window.max()]
-    usable_windows = set(usable.index)
-    sub = tbl[tbl["window"].isin(usable_windows)]
-    score = sub.groupby("window")["mean_pinball"].sum()
-    w1, w2 = sorted(score.index)
-    win_small = score.idxmin()
-    rel_diff = abs(score[w1] - score[w2]) / min(score[w1], score[w2])
-    chosen = win_small if rel_diff >= 0.01 else max(w1, w2)
+    # equal-weight normalized aggregation per (model, feature-set, tail)
+    cells = []
+    for (model, fset, tail), g in tbl.groupby(["model", "feature_set", "tail"]):
+        if len(g) < 2:
+            continue
+        losses = {int(r["window"]): r["mean_pinball"] for _, r in g.iterrows()}
+        mean_l = float(np.mean(list(losses.values())))
+        cells.append({
+            "model": model, "feature_set": fset, "tail": tail,
+            **{f"loss_w{w}": losses[w] for w in sorted(losses)},
+            **{f"norm_w{w}": losses[w] / mean_l for w in sorted(losses)},
+            "winner": min(losses, key=losses.get),
+        })
+    cell_df = pd.DataFrame(cells)
+    cell_df.to_csv(dev_dir / "window_selection_cells.csv", index=False)
+
+    windows = sorted(tbl["window"].unique())
+    if len(windows) != 2:
+        sys.exit(f"expected exactly 2 window candidates, got {windows}")
+    w1, w2 = windows
+    mean_norm = cell_df[[f"norm_w{w1}", f"norm_w{w2}"]].mean()
+    win_counts = cell_df["winner"].value_counts().to_dict()
+    chosen_raw = mean_norm.idxmin().replace("norm_w", "")
+    # sensitivity: drop-one-cell winner distribution
+    sens = {}
+    for i in range(len(cell_df)):
+        sub = cell_df.drop(index=i)
+        m = sub[[f"norm_w{w1}", f"norm_w{w2}"]].mean()
+        sens[i] = int(m.idxmin().replace("norm_w", ""))
+    sens_counts = pd.Series(sens).value_counts().to_dict()
+
+    # conservative choice on disagreement: longer window (more 1% tail samples)
+    raw_sum = tbl.groupby("window")["mean_pinball"].sum()
+    raw_winner = int(raw_sum.idxmin())
+    disagreement = raw_winner != int(chosen_raw)
+    chosen = int(chosen_raw)
+    if disagreement:
+        chosen = max(w1, w2)
+        note = ("aggregations disagree; conservative choice (longer window) taken "
+                "for 1% tail stability")
+    else:
+        note = "aggregations agree"
     decision = {
-        "window_pinball_sum": {int(k): float(v) for k, v in score.items()},
-        "relative_diff": float(rel_diff),
-        "rule": "min_sum_pinball; tie-break (rel diff < 1%) -> 1500",
-        "chosen_window": int(chosen),
-        "note": "基于 development 证据；覆盖率为诊断列。",
+        "candidates": [w1, w2],
+        "mean_normalized_loss": {int(k): float(v) for k, v in mean_norm.items()},
+        "cell_win_counts": {int(k): int(v) for k, v in win_counts.items()},
+        "sensitivity_win_counts": {int(k): int(v) for k, v in sens_counts.items()},
+        "raw_pinball_sum_winner": int(raw_winner),
+        "disagreement": bool(disagreement),
+        "rule": ("min equal-weight mean of candidate-relative normalized loss; "
+                 "disagreement -> conservative longer window"),
+        "chosen_window": chosen,
+        "note": note,
     }
-    (out_root / "tables" / "window_decision.json").write_text(
+    (dev_dir / "window_decision.json").write_text(
         json.dumps(decision, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     print(json.dumps(decision, ensure_ascii=False, indent=2))
-    print(f"对比表 -> {out_root / 'tables' / 'window_comparison.csv'}")
+    print(f"tables -> {dev_dir}/window_selection.csv, window_decision.json")
 
 
 if __name__ == "__main__":

@@ -34,7 +34,7 @@ from spyvar.evaluation.metrics import pinball_loss
 from spyvar.models import make_model
 from spyvar.rolling import run_rolling
 
-SEARCH_WINDOW = 1000  # 小窗口先搜索（候选窗口之一）
+# 搜索在较小候选窗口上执行（development-only）
 ORIGIN_STEP = 5
 SEARCH_START = "2006-01-01"
 SEARCH_END = "2007-12-31"
@@ -51,7 +51,9 @@ def main() -> None:
     df = load_data(cfg, args.data)
     search = cfg.section("neural_search")
     out_root = Path(args.out_root)
-    (out_root / "tables").mkdir(parents=True, exist_ok=True)
+    dev_dir = out_root / "development"
+    dev_dir.mkdir(parents=True, exist_ok=True)
+    search_window = min(cfg.window_candidates)
 
     all_rows = []
     best_by_model = {}
@@ -59,7 +61,7 @@ def main() -> None:
         fset = "F3"
         if model_id not in search:
             continue
-        origins = forecast_origins(df, SEARCH_START, SEARCH_END, SEARCH_WINDOW)
+        origins = forecast_origins(df, SEARCH_START, SEARCH_END, search_window)
         origins = origins[::ORIGIN_STEP]
         print(f"{model_id}: {len(origins)} 搜索原点")
         grid = _grid(search[model_id])
@@ -68,11 +70,12 @@ def main() -> None:
             panel = run_rolling(
                 df,
                 lambda mid=model_id, mcfg=model_cfg: make_model(mid, {mid: mcfg}),
-                origins, SEARCH_WINDOW, cfg.tails, cfg.primary_seed,
+                origins, search_window, cfg.tails, cfg.primary_seed,
                 model_cfg, feature_names=cfg.feature_sets[fset],
                 workers=cfg.workers,
             )
-            row = {"model_id": model_id, **combo}
+            row = {"model_id": model_id, "feature_set": fset, "window": search_window,
+                   "seed": cfg.primary_seed, "validation_fold": f"{SEARCH_START}_{SEARCH_END}", **combo}
             losses = []
             for alpha in cfg.tails:
                 y = panel["realized_log_ret"].to_numpy(dtype=float)
@@ -84,6 +87,7 @@ def main() -> None:
                 )
                 losses.append(loss)
             row["pinball_mean"] = float(np.mean(losses))
+            row["selection_criterion"] = "mean pinball over 1/5/10% tails"
             row["fit_failures"] = int((panel["fit_status"] != "ok").sum())
             all_rows.append(row)
             print(f"  {combo}: pinball_mean={row['pinball_mean']:.6g}")
@@ -98,11 +102,11 @@ def main() -> None:
         }
         print(f"  BEST {model_id}: {best_by_model[model_id]}")
 
-    pd.DataFrame(all_rows).to_csv(out_root / "tables" / "neural_search.csv", index=False)
-    (out_root / "tables" / "neural_search_decision.json").write_text(
+    pd.DataFrame(all_rows).to_csv(dev_dir / "neural_search.csv", index=False)
+    (dev_dir / "neural_search_decision.json").write_text(
         json.dumps(best_by_model, ensure_ascii=False, indent=2), encoding="utf-8"
     )
-    print(f"搜索结果 -> {out_root / 'tables' / 'neural_search.csv'}")
+    print(f"搜索结果 -> {dev_dir / 'neural_search.csv'}")
 
 
 if __name__ == "__main__":
