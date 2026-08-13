@@ -1,8 +1,9 @@
 # ruff: noqa: UP031  # percent-format used deliberately (LaTeX escaping)
-"""英文 PDF 报告生成（19 节结构）。
+"""English PDF report generator (19-section structure).
 
-全部数字从 outputs/tables 产物读取（禁止手录），图表从
-outputs/figures 引用；pdflatex 编译。报告再生不重训模型。
+All numbers are read from the canonical run tables (never hand-entered); figures
+are referenced from the canonical run figures; pdflatex compiles the PDF.
+Report regeneration does not retrain any model.
 """
 
 from __future__ import annotations
@@ -205,27 +206,47 @@ def _conclusion_latex(metrics, dm, regime):
         m1m3_1_w, h_m1m3_1, m1m3_10_w, h_m1m3_10, m1m3_5_w, h_m1m3_5, m2m3_10_w, h_m2m3_10, fr_m5_1)
     lines.append(neural_s)
 
-    # ablation: marginal deltas at the 5% tail
-    abl5 = metrics[metrics["tail"] == 0.05]
-    deltas = []
-    for model in ("M2", "M3"):
-        sub = abl5[abl5["model"] == model].sort_values("feature_set")
-        if len(sub) >= 4:
-            f0 = float(sub.iloc[0]["mean_pinball"])
-            f1 = float(sub.iloc[1]["mean_pinball"])
-            f2 = float(sub.iloc[2]["mean_pinball"])
-            f3 = float(sub.iloc[3]["mean_pinball"])
-            d_rv = 100.0 * (f0 - f1) / f0
-            d_bv = 100.0 * (f1 - f2) / f1
-            d_f3 = 100.0 * (f2 - f3) / f2
-            deltas.append("%s: RV $\\rightarrow$ %.1f\\%%, BV$|$RV %.1f\\%%, F3 block %.1f\\%%" % (
-                name[model], d_rv, d_bv, d_f3))
-    delta_text = ", ".join(deltas) if deltas else "not available"
-    lines.append("Feature ablations at the 5\\% tail (" + delta_text
-                 + "): realized volatility is the only clearly useful incremental realized-measure "
-                 "block; bipower variation contributes little once RV is observed; the F3 jump/downside "
-                 "block does not provide stable out-of-sample gains. The F3 effect is attributed to the "
-                 "block as a whole, not to any single component.")
+    # ablation: per-model per-tail marginal deltas (relative pinball change)
+    abl = metrics[metrics["model"].isin(["M2", "M3"])]
+
+    def _pctl(model_id: str, fset: str, tail: float) -> float:
+        sub = abl[(abl["model"] == model_id) & (abl["feature_set"] == fset) & (abl["tail"] == tail)]
+        return float(sub.iloc[0]["mean_pinball"])
+
+    def _delta(model_id: str, fa: str, fb: str, tail: float) -> float:
+        return 100.0 * (_pctl(model_id, fa, tail) - _pctl(model_id, fb, tail)) / _pctl(model_id, fa, tail)
+
+    tl = {0.01: "1\\%", 0.05: "5\\%", 0.10: "10\\%"}
+
+    def _fmt(d: dict) -> str:
+        return ", ".join(f"{tl[t]}: {d[t]:+.1f}\\%" for t in (0.01, 0.05, 0.10))
+
+    def _improves(d: dict) -> str:
+        ts = [t for t in (0.01, 0.05, 0.10) if d[t] > 0.5]
+        return ", ".join(tl[t] for t in ts) if ts else "none"
+
+    rv2 = {t: _delta("M2", "F0", "F1", t) for t in (0.01, 0.05, 0.10)}
+    rv3 = {t: _delta("M3", "F0", "F1", t) for t in (0.01, 0.05, 0.10)}
+    bv2 = {t: _delta("M2", "F1", "F2", t) for t in (0.01, 0.05, 0.10)}
+    bv3 = {t: _delta("M3", "F1", "F2", t) for t in (0.01, 0.05, 0.10)}
+    f32 = {t: _delta("M2", "F2", "F3", t) for t in (0.01, 0.05, 0.10)}
+    f33 = {t: _delta("M3", "F2", "F3", t) for t in (0.01, 0.05, 0.10)}
+
+    lines.append(
+        "Feature ablations isolate the incremental value of each realized-measure block by "
+        "model and tail (relative pinball change; positive = improvement). Adding RV "
+        f"(F0 $\\rightarrow$ F1): LinQR {_fmt(rv2)} - improvements at the {_improves(rv2)} tails; "
+        f"MLP {_fmt(rv3)} - improvements at the {_improves(rv3)} tails. Adding BV conditional on RV "
+        f"(F1 $\\rightarrow$ F2): LinQR {_fmt(bv2)} - essentially no incremental gain to linear "
+        "quantile regression once RV is observed; "
+        f"MLP {_fmt(bv3)} - the MLP appears able to exploit BV information, particularly at the "
+        f"1\\% tail ({bv3[0.01]:+.1f}\\%). This additional information value is nevertheless "
+        "insufficient to make the MLP outperform GARCH/GJR in absolute forecast loss "
+        "(information increment $\\neq$ model-level superiority). The F3 jump/downside block "
+        f"(F2 $\\rightarrow$ F3): LinQR {_fmt(f32)}; MLP {_fmt(f33)} - no stable positive contribution "
+        "at any model-tail cell; the F3 effect is attributed to the block as a whole, not to any "
+        "single component."
+    )
     return "\n\n".join(lines)
 
 def forecast_count(out_root: Path) -> int:
@@ -373,7 +394,7 @@ Figure~\ref{fig:regime} and Table~\ref{tab:regime} stratify frozen results into 
 \end{table}
 
 \section{Robustness}
-Seed robustness for the neural models (predeclared seeds 7, 42, 2026; headline series is the primary seed 42, not an ensemble): \texttt{outputs/tables/seed\_robustness\_summary.csv}. DM and block-bootstrap pairwise comparisons: Table~\ref{tab:dm}.
+Seed robustness for the neural models (predeclared seeds 7, 42, 2026; headline series is the primary seed 42, not an ensemble): the canonical run tables (\texttt{RUNPLACEHOLDER/tables/seed\_robustness\_summary.csv}). DM and block-bootstrap pairwise comparisons: Table~\ref{tab:dm}.
 
 \begin{table}[ht]
 \centering

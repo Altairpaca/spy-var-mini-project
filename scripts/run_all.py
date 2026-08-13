@@ -1,18 +1,20 @@
-"""统一可复现入口：python scripts/run_all.py --config configs/final.yaml
+"""Unified reproducible entry point: python scripts/run_all.py --config configs/final.yaml
 
-阶段（--skip 可跳过任一阶段，用逗号分隔）：
-  audit     数据审计 -> docs/DATA_AUDIT.md
-  dev       development rolling-origin 验证（窗口 1000/1500）
-  search    NN 超参搜索（development only，可跳过以复用已有决策）
-  select    窗口选择 -> outputs/tables/window_decision.json
-  freeze    冻结 final test（生成 FREEZE_MANIFEST.md）
-  final     冻结 final test 全量运行
-  robust    NN seed 稳健性
-  eval      统一评估（全部指标表）
-  figures   论文级图表
-  report    PDF 报告
+Stages (order is the research protocol; --skip/--stages may select subsets):
+  audit     data audit -> docs/DATA_AUDIT.md
+  dev       development rolling-origin validation (windows 1000/1500)
+  select    window selection -> outputs/development/window_decision.json
+  search    NN hyperparameter search on the SELECTED window (needs window_decision.json)
+  update    write development decisions into the FINAL config (always targets configs/final.yaml)
+  freeze    freeze the final test (generates FREEZE_MANIFEST.md)
+  final     frozen final-test full run
+  robust    NN seed robustness
+  eval      unified evaluation (all metric tables)
+  figures   paper-grade figures
+  report    PDF report
 
-报告再生（不重训）：python scripts/make_report.py --config configs/final.yaml
+Report-only regeneration (no retraining):
+  python scripts/make_report.py --config configs/final.yaml
 """
 
 from __future__ import annotations
@@ -62,7 +64,12 @@ def main() -> None:
 
     cmd_base = [sys.executable]
     for stage in stages:
-        cmd = cmd_base + [STAGE_SCRIPT[stage], "--config", args.config]
+        cfg_arg = args.config
+        if stage == "update":
+            # The update stage always writes development decisions into the FINAL
+            # config. Passing a development config here would corrupt it.
+            cfg_arg = "configs/final.yaml"
+        cmd = cmd_base + [STAGE_SCRIPT[stage], "--config", cfg_arg]
         if args.data:
             cmd += ["--data", args.data]
         if args.workers:

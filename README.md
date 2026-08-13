@@ -1,102 +1,141 @@
 # SPY VaR Mini-Project
 
-PhD pre-screening mini-project：SPY 下一交易日对数收益的 1%/5%/10% 条件 VaR 预测，
-严格 rolling-window 框架，经典方法与小型神经网络方法的公平比较。
+PhD pre-screening mini-project: one-day-ahead conditional VaR forecasts (1% / 5% / 10%)
+for SPY log returns under a strictly causal rolling-window framework, with a fair
+comparison of classical and small neural models.
 
-## 研究协议摘要
+## Research protocol summary
 
-- **零未来信息泄漏**：预测 t+1 只用截至 t 的信息；scaler/early-stopping/超参选择全部限制在训练窗口内。
-- **development**（< 2008-01-01）：rolling-origin validation，验证年份 2005/2006/2007（1500 窗口为 2006-2007，见 RESEARCH_LOG）。
-- **final test**（>= 2008-01-01）：首次运行前必须冻结（`configs/final.yaml` + `docs/FREEZE_MANIFEST.md`，gate 由测试与脚本强制）。
-- **模型**：M0 Historical Simulation、M1 GARCH(1,1)-t、M2 Linear/HAR Quantile、M3 Multi-Quantile MLP（结构非交叉）、M4 GJR-GARCH-t、M5 GRU。
-- **特征消融**：F0（returns）→ F1（+RV）→ F2（+BV）→ F3（+jump + downside asymmetry），M2/M3 共享信息集。
-- **seeds**：primary 42（预先声明），robustness {7, 2026}；主结果对应 primary seed，非 ensemble。
-- **评价**：failure rate、Kupiec、Christoffersen ind/cc、pinball loss、crossing rate、violation clustering、regime 分段、DM + block bootstrap；DQ 为附加诊断。
+- **Zero future information leakage**: the forecast for `t+1` uses only information
+  observable at `t`; scalers, early stopping and hyperparameter selection are confined
+  to the training window.
+- **development** (< 2008-01-01): rolling-origin validation, validation years
+  2005/2006/2007 (1500-day window valid for 2006-2007; see RESEARCH_LOG.md).
+- **final test** (>= 2008-01-01): must be frozen before first run
+  (`configs/final.yaml` + `docs/FREEZE_MANIFEST.md`; the gate is enforced by tests
+  and scripts).
+- **Models**: M0 Historical Simulation, M1 GARCH(1,1)-t, M2 Linear/HAR Quantile,
+  M3 Multi-Quantile MLP (structurally non-crossing), M4 GJR-GARCH-t, M5 GRU.
+- **Feature ablation**: F0 (returns) -> F1 (+RV) -> F2 (+BV) -> F3 (+jump + downside
+  asymmetry); M2/M3 share the information sets.
+- **Seeds**: primary 42 (predeclared), robustness {7, 2026}; main results use the
+  primary seed, not an ensemble.
+- **Evaluation**: failure rate, Kupiec, Christoffersen ind/cc, pinball loss, crossing
+  rate, violation clustering, regime breakdown, DM + block bootstrap; DQ as an
+  additional diagnostic.
 
-## 环境
+## Environment
 
 ```bash
-uv sync                 # python 3.11 + 全部依赖（含 CPU torch）
+uv sync                 # Python 3.11 + all dependencies (incl. CPU torch)
 ```
 
-要求：Python 3.11、约 4 GB 内存、CPU 即可（NN 模型极小）；GPU 可选。
-BLAS 线程限制已在脚本内自动设置（OMP/MKL/OPENBLAS=1）。
+Requirements: Python 3.11, about 4 GB RAM, CPU only (the NN models are tiny); GPU
+optional. BLAS thread limits are set automatically inside the scripts
+(OMP/MKL/OPENBLAS=1).
 
-## 复现（三阶段研究协议）
+## Reproduction (three-phase research protocol)
 
-研究生命周期明确分为三个带 Git 边界的阶段；freeze 是 development 与
-frozen OOS 之间的强制边界，不压缩为单一命令。
+The research lifecycle is split into three phases separated by Git boundaries; the
+freeze is a mandatory boundary between development and frozen OOS. It is deliberately
+not compressed into a single command.
 
-### Phase 1 — Development（可重复执行）
+### Phase 1 - Development (repeatable)
+
+Run each development stage with the **development** config:
+
+```bash
+python scripts/audit_data.py --config configs/development.yaml
+python scripts/run_development.py --config configs/development.yaml
+python scripts/select_window.py --config configs/development.yaml
+python scripts/neural_search.py --config configs/development.yaml
+```
+
+Artifacts (`outputs/development/`): data audit, development panels, window selection
+(`window_decision.json`), neural search (`neural_search.csv` +
+`neural_search_decision.json`, executed on the *selected* window - the script fails
+closed if `window_decision.json` is missing). `neural_search.py` refuses to fall back
+to a candidate window.
+
+Then write the development-only decisions into the **final** config (never into the
+development config):
+
+```bash
+python scripts/update_final_config.py --config configs/final.yaml
+```
+
+**Commit these development decisions** (`window_decision.json`,
+`neural_search_decision.json`, updated `configs/final.yaml`) before proceeding.
+
+`scripts/run_all.py` also supports running the development stages together; the
+`update` stage always targets `configs/final.yaml` regardless of the `--config`
+argument:
 
 ```bash
 python scripts/run_all.py --config configs/development.yaml --stages audit,dev,select,search,update
 ```
 
-产出（`outputs/development/`）：数据审计、dev 面板、窗口选择
-（`window_decision.json`）、NN 搜索（`neural_search.csv` +
-`neural_search_decision.json`，在选定窗口上执行）、更新后的
-`configs/final.yaml`。**提交这些 development 决策**后再进入冻结。
-
-### Phase 2 — Freeze（一次性，Git 边界）
+### Phase 2 - Freeze (one-time Git boundary)
 
 ```bash
-python scripts/freeze_final.py --config configs/final.yaml   # 校验 data/config/code 签名 + clean tree
+python scripts/freeze_final.py --config configs/final.yaml   # validates data/config/code signatures + clean tree
 git add configs/final.yaml docs/FREEZE_MANIFEST.md docs/freeze.json
-git commit   # 冻结 commit（保留 SHA）
+git commit   # freeze commit (SHA is preserved in history)
 ```
 
-冻结后任何代码/配置改动都会使 gate 拒绝，直到重新冻结。
+Any code/config change after freezing makes the gate reject further runs until a new
+freeze.
 
-### Phase 3 — Frozen OOS（冻结后仅运行一次）
+### Phase 3 - Frozen OOS (run once, after freeze)
 
 ```bash
 python scripts/run_all.py --config configs/final.yaml --stages final,robust,eval,figures,report
 ```
 
-（或逐脚本：`run_final.py --clean-run` → `seed_robustness.py` →
-`evaluate.py` → `make_figures.py` → `make_report.py`。）
+(or stage by stage: `run_final.py --clean-run` -> `seed_robustness.py` ->
+`evaluate.py` -> `make_figures.py` -> `make_report.py`.)
 
-### Report-only regeneration（不重训）
+### Report-only regeneration (no retraining)
 
 ```bash
 python scripts/make_report.py --config configs/final.yaml
 python scripts/generate_final_summary.py
 ```
 
-自动测试：
+Tests:
 
 ```bash
 python -m pytest tests/
 ```
 
-## 产物
+## Artifacts
 
 ```text
-outputs/predictions/   每实验预测面板（parquet）+ manifest（json）
-outputs/tables/        指标/对比/审计表（csv/json）
-outputs/figures/       论文级图表（png）
-outputs/manifests/     冻结清单与数据哈希
-docs/DATA_AUDIT.md     数据审计（自动生成）
-docs/FREEZE_MANIFEST.md final-test 冻结清单（自动生成）
-docs/FINAL_SUMMARY_ZH.md 中文审计摘要
-report/final_report.pdf 英文正式报告（自动生成）
+outputs/runs/<freeze_id>/  canonical frozen run: predictions (parquet) + manifests
+outputs/development/       development decisions (window selection, neural search)
+outputs/manifests/         freeze manifests and data hashes
+docs/DATA_AUDIT.md         data audit (auto-generated)
+docs/FREEZE_MANIFEST.md    final-test freeze manifest (auto-generated)
+docs/FINAL_SUMMARY_ZH.md   Chinese audit summary (auto-generated)
+report/final_report.pdf    formal English report (auto-generated)
 ```
 
-所有报告数字由脚本从产物重算，禁止手工录入。
+All report numbers are recomputed by scripts from the artifacts; none are
+hand-entered.
 
-## 仓库布局
+## Repository layout
 
 ```text
-src/spyvar/      数据层/特征/滚动引擎/模型/评价/冻结机制
-scripts/         可复现实验入口（run_all.py 统一调度）
-tests/           泄漏/对齐/滚动/符号约定/统计检验正确性测试
-configs/         实验协议（development.yaml / final.yaml）
-docs/            审计、冻结、中文摘要、任务摘要
-report/          英文 PDF 报告
+src/spyvar/       data/features/rolling engine/models/evaluation/freeze machinery
+scripts/          reproducible experiment entry points (run_all.py orchestrates)
+tests/            leakage/alignment/rolling/sign-convention/statistical-test tests
+configs/          experiment protocol (development.yaml / final.yaml)
+docs/             audits, freeze, Chinese summary, assignment summary
+report/           English PDF report
 ```
 
-## 数据
+## Data
 
-`data/raw/spy_data.csv`（列：date, log_ret, rv5, bv）为只读输入；
-加载器校验完整性，冻结时记录 SHA256。数据文件由任务方提供。
+`data/raw/spy_data.csv` (columns: date, log_ret, rv5, bv) is a read-only input; the
+loader validates integrity and records the SHA256 at freeze time. The data file is
+provided by the assignment.

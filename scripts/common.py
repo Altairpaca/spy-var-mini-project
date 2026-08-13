@@ -207,17 +207,30 @@ def violation_col(alpha: float) -> str:
 def canonical_run_dir(out_root: str | Path) -> Path:
     """Canonical frozen-run directory for the current freeze (audit provenance).
 
-    Reads outputs/manifests/current_run.json written by run_final.py;
-    falls back to the out_root itself when no canonical run is recorded.
+    Reads outputs/manifests/current_run.json written by run_final.py and validates
+    it against outputs/manifests/freeze.json (git commit, config SHA, data SHA);
+    a mismatch fails closed instead of silently pointing at a stale run.
+    Falls back to out_root itself when no canonical run is recorded.
     """
     import json
 
     base = Path(out_root)
     marker = base / "manifests" / "current_run.json"
+    manifest = base / "manifests" / "freeze.json"
     if marker.exists():
         try:
             info = json.loads(marker.read_text(encoding="utf-8"))
             run_dir = Path(info.get("run_dir", ""))
+            if run_dir.exists() and manifest.exists():
+                freeze = json.loads(manifest.read_text(encoding="utf-8"))
+                for key in ("git_commit", "config_sha256", "data_sha256"):
+                    info_v, freeze_v = info.get(key), freeze.get(key)
+                    if info_v and freeze_v and info_v != freeze_v:
+                        raise SystemExit(
+                            f"ERROR: current_run.json {key} ({info_v[:12]}...) does not match "
+                            f"freeze.json ({freeze_v[:12]}...); the canonical run is stale. "
+                            "Re-run the frozen final test or remove the stale marker."
+                        )
             if run_dir.exists():
                 return run_dir
         except (OSError, json.JSONDecodeError):

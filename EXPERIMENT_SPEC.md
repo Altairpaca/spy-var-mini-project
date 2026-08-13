@@ -61,7 +61,8 @@ rv5/bv 尺度、sqrt(rv5) 合理性、RV/BV 相关、自相关、jump 分布、�
 - M2/M3 共用 F0-F3，Linear vs MLP 归因于映射非线性而非信息集。
 - primary seed 42 预先声明；robustness seeds {7, 2026}（M3-F3 / M5-F3）。
 - 超参搜索：development-only 小空间（hidden {16,32,{32,16},{32,32}} × lr {1e-3,3e-4} ×
-  wd {0,1e-4}），验证原点 2006-2007 每 5 日取 1，窗口 1000；选择验证期 mean pinball。
+  wd {0,1e-4}），验证原点 2006-2007 每 5 日取 1，窗口 = window_decision.json 选定值
+  （1500，窗口选择先于搜索）；选择验证期 mean pinball。
 - 主结果 = primary seed 的面板；robustness 以 mean/std 报告。
 
 ## 9. Evaluation（全部实现，公式级测试锁定）
@@ -85,6 +86,6 @@ rv5/bv 尺度、sqrt(rv5) 合理性、RV/BV 相关、自相关、jump 分布、�
 - [x] retraining schedule（每日全量重拟合）
 - [x] seeds（42 primary；7/2026 robustness）
 - [x] evaluation metrics/tests
-- [ ] primary window 数值（development 后写入 final.yaml）
-- [ ] NN 最终超参（development 搜索后写入 final.yaml）
-- [ ] freeze_final.py 执行 + 冻结 commit（首次 final test 前）
+- [x] primary window 数值（development 后写入 final.yaml：1500，见 freeze.json）
+- [x] NN 最终超参（development 搜索后写入 final.yaml：M3 hidden [16] lr 1e-3 wd 1e-4；M5 hidden 16 lr 1e-3 wd 0）
+- [x] freeze_final.py 执行 + 冻结 commit（7a6359d，manifest git_commit e34928235ed6；首次 final test 前完成）

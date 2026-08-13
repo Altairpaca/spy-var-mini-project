@@ -1,11 +1,15 @@
-"""NN 超参搜索（development only，小空间）。
+"""Neural hyperparameter search (development only, small space).
 
-- 数据：窗口 = 候选窗口中的较小者（1000），验证原点 = 2006-2007
-  的稀疏子集（每 5 个交易日 1 个），全部 < 2008-01-01；
-- 网格：configs/development.yaml 的 neural_search 节；
-- 选择指标：验证期 mean pinball（三 tail 均值）；
-- 输出 outputs/tables/neural_search.csv + neural_search_decision.json，
-  最终超参写入 configs/final.yaml（由脚本更新，防手改）。
+- Window: read from outputs/development/window_decision.json (the SELECTED
+  window; the script fails closed when the file is missing - protocol is
+  select window -> search neural, never a fallback to a candidate window);
+  validation origins = sparse subset of 2006-2007 (every 5th trading day),
+  all < 2008-01-01;
+- Grid: the neural_search section of configs/development.yaml;
+- Selection criterion: validation mean pinball (mean over the three tails);
+- Output: outputs/development/neural_search.csv +
+  neural_search_decision.json; final hyperparameters are written into
+  configs/final.yaml by update_final_config.py (scripted, no hand edits).
 """
 
 from __future__ import annotations
@@ -56,13 +60,16 @@ def main() -> None:
     # 协议修复（correction/final-pass）：搜索必须在窗口选择之后、
     # 在 development 选定的窗口上执行（不再用候选中的较小者）。
     decision_path = dev_dir / "window_decision.json"
-    if decision_path.exists():
-        decision = json.loads(decision_path.read_text(encoding="utf-8"))
-        search_window = int(decision["chosen_window"])
-        print(f"neural search window: {search_window} (from window_decision.json)")
-    else:
-        search_window = min(cfg.window_candidates)
-        print(f"WARNING: window_decision.json missing; fallback to min candidate {search_window}")
+    if not decision_path.exists():
+        raise SystemExit(
+            "ERROR: outputs/development/window_decision.json not found. "
+            "Research protocol requires 'select window -> search neural'; "
+            "run scripts/select_window.py first. Refusing to fall back to a "
+            "candidate window."
+        )
+    decision = json.loads(decision_path.read_text(encoding="utf-8"))
+    search_window = int(decision["chosen_window"])
+    print(f"neural search window: {search_window} (from window_decision.json)")
 
     all_rows = []
     best_by_model = {}

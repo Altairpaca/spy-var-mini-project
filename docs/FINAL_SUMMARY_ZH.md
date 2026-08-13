@@ -21,16 +21,16 @@
 
 - 数据：SPY 日度 log_ret / rv5 / bv，4640 行（2000-01-04 ~ 2018-06-27），SHA256 277406a832c1418d... 冻结。
 - development 期：target date < 2008-01-01，rolling-origin 验证（公共目标 498 个，2006-01-06 ~ 2007-12-28）。
-- final test（重新冻结 e34928235ed6，freeze commit 3cb2e21）：target date >= 2008-01-01，2641 个预测日（2008-01-02 ~ 2018-06-27），全部模型同日期集。
-- 冻结内容：primary window=1500（等权归一化聚合，24 cells 中 23 个偏好 1500）、M3 hidden [32] / lr 1e-3 / wd 0 / batch 128、
-  M5 hidden 32 / lr 1e-3 / wd 0 / batch 64、primary seed 42、robustness seeds {7, 2026}、config SHA256 058d5aea59044889...、data SHA256 277406a8...
+- final test（freeze manifest 记录的 git_commit e34928235ed6）：target date >= 2008-01-01，2641 个预测日（2008-01-02 ~ 2018-06-27），全部模型同日期集。
+- 冻结内容：primary window=1500（等权归一化聚合，24 cells 中 23 个偏好 1500）、M3 hidden [16] / lr 0.001 / wd 0.0001 / batch 128、
+  M5 hidden 16 / lr 0.001 / wd 0.0 / batch 64、primary seed 42、robustness seeds {7, 2026}、config SHA256 058d5aea59044889...、data SHA256 277406a832c1418d...
 - 零泄漏约束：特征/标准化/early-stopping 全部限制在训练窗口内（截断不变性测试锁定）；MLP/GRU target 采用 train-only 标准化（Scheme B）。
 - 冻结门禁（强化）：data/config/code signature + working tree clean（freeze 时）+ effective data path 校验；正式产物隔离于 `outputs/runs/<freeze_id>/`，复用仅限签名一致。
 
 ## 2. 为什么选择 1500 日窗口（等权聚合，审计修复）
 
 - 决策规则（预先声明）：每 (model, feature-set, tail) 单元内候选相对归一化损失等权平均；报告 per-cell winner、win count、drop-one sensitivity；聚合不一致时保守选长窗口。
-- 证据（outputs/development/window_decision.json）：24 个单元中 23 个偏好 1500（等权平均归一化损失 0.962 vs 1.038）；raw pinball sum 一致（无分歧）。
+- 证据（outputs/development/window_decision.json）：24 个单元中 23 个偏好 1500（等权平均归一化损失 0.962 vs 1.038）；raw pinball sum 一致（无分歧）；drop-one sensitivity 24/24 仍选 1500。
 - 1% tail 校准：1500 窗口 |failure rate - 1%| 更小 —— 长窗口有效尾部样本更多（约 15 vs 10 个期望违例），经验分位数更稳定。
 
 ## 3. 模型含义（数学/经济学）
@@ -59,8 +59,8 @@
 | GJR-t | 0.0144 | 0.0632 | 0.1079 | 0.033 | 0.577 | 0.089 |
 | GRU | 0.0363 | 0.0674 | 0.1352 | 0.000 | 0.000 | 0.000 |
 
-- 修正后 GARCH 族 1% 违例率 1.4-1.5%，**高于**名义 1%（即 mildly under-conservative：VaR 不够负、违例偏多，Kupiec p=0.01-0.03 拒绝）；HS 5%/10% 频率最接近目标但独立性检验 p<0.001（违例强聚集）。
-- 条件充分性（逐模型）：违例独立性在 1%/5% 均未被明显拒绝；但条件覆盖并非普遍通过 —— 仅 GJR-t 的 1% CC 在 5% 水平不拒绝（p=0.089），GARCH-t 1% CC p=0.017 拒绝、两模型 5% CC 均拒绝（p=0.007/0.008）。正确频率 ≠ 正确条件 VaR 动态。
+- 修正后 GARCH 族 1% 违例率 0.0151 / 0.0144，**高于**名义 1%（即 mildly under-conservative：VaR 不够负、违例偏多，Kupiec p=0.014 / 0.033）；HS 5%/10% 频率最接近目标但独立性检验 p=0.000（违例强聚集）。
+- 条件充分性（逐模型）：仅 GJR-t 的 1% CC 在 5% 水平不拒绝（p=0.089），GARCH-t 1% CC p=0.017 拒绝；5% CC 两模型均拒绝（p=0.007 / 0.008）；10% CC GARCH-t 拒绝（p=0.036）、GJR-t 不拒绝（p=0.074）。正确频率 ≠ 正确条件 VaR 动态。
 
 ## 6. pinball loss 对比（修正后）
 
@@ -70,11 +70,22 @@
 
 ## 7. 特征消融（F0 returns → F1 +RV → F2 +BV → F3 +jump/downside block）
 
-- LinQR 5% tail pinball：F0(0.00138) → F1(0.00132) → F2(0.00132) → F3(0.00133)
-- MLP 5% tail pinball：F0(0.00137) → F1(0.00134) → F2(0.00130) → F3(0.00131)
-- **RV 增量**（F0→F1）：线性 -4.3%，MLP 有增量 —— RV 信息有值。
-- **BV 条件增量**（F1→F2）：≈0 —— BV 在 RV 之后边际增量很小。
-- **F3 jump/downside block 增量**（F2→F3）：很小或为负 —— 整块效果，不单独归因 jump。
+- LinQR 各 tail pinball（F0→F3）：
+  - 1% tail：F0(0.00045) → F1(0.00045) → F2(0.00045) → F3(0.00052)
+  - 5% tail：F0(0.00138) → F1(0.00132) → F2(0.00132) → F3(0.00133)
+  - 10% tail：F0(0.00216) → F1(0.00206) → F2(0.00207) → F3(0.00208)
+- MLP 各 tail pinball（F0→F3）：
+  - 1% tail：F0(0.00050) → F1(0.00046) → F2(0.00041) → F3(0.00043)
+  - 5% tail：F0(0.00137) → F1(0.00134) → F2(0.00130) → F3(0.00131)
+  - 10% tail：F0(0.00221) → F1(0.00222) → F2(0.00219) → F3(0.00219)
+
+- **RV 增量**（F0→F1，pinball 相对变化 %，正 = 改善）：
+  - LinQR：1% +0.1%、5% +4.4%、10% +4.8% —— 5%/10% tail 有改善（1% 近似为零）。
+  - MLP：1% +8.2%、5% +2.0%、10% -0.6% —— 1%/5% tail 有改善（10% 近似为零）。
+- **BV 条件增量**（F1→F2，正 = 改善）：
+  - LinQR：1% -1.3%、5% +0.1%、10% -0.5% —— RV 之后对线性分位数回归几乎没有增量。
+  - MLP：1% +10.9%、5% +2.8%、10% +1.5% —— 尤其 1% tail 有明显增量。但这是**信息增量 ≠ 模型层面超越**：MLP 加 BV 后仍未超过 GARCH 族。
+- **F3 jump/downside block 增量**（F2→F3，正 = 改善）：LinQR 1% -14.7%、5% -1.0%、10% -0.4%；MLP 1% -3.9%、5% -0.7%、10% -0.1% —— 各 model×tail 无稳定正增量，整块效果不单独归因 jump。
 
 ## 8. 危机与 regime 发现（修正后，5% tail failure rate）
 
@@ -102,15 +113,15 @@
 - LinQR vs MLP @10%：DM=-2.73 (raw p=0.0064, Holm p=0.0227, bootstrap p=0.025, favors a)
 - MLP vs GRU @10%：DM=-0.69 (raw p=0.4886, Holm p=0.4886, bootstrap p=0.699, favors a)
 
-- GJR-t（M4）在 5%/10% tail 显著优于 GARCH-t（Holm p=0.006/0.011，bootstrap 一致），1% tail 为方向性证据（Holm p=0.071 不显著）—— 非对称波动率设定带来预测损失改进，与 leverage/asymmetry 效应 consistent（本实验不做参数级 leverage 识别）。
-- MLP vs GARCH-t：1%/10% 显著更差（Holm p<0.01），5% 不显著（p=0.33）—— 负结果有 tail 依赖。
-- DM 与 bootstrap 不一致处（如 1% tail 的 M1 vs M3：DM 显著但 bootstrap p=0.10-0.15）如实报告为 inference sensitive to dependence/finite-sample procedure。
+- GJR-t（M4）vs GARCH-t：5% Holm p=0.0063（显著，bootstrap p=0.001）、10% Holm p=0.0227（显著，bootstrap p=0.003）、1% Holm p=0.0705（方向性证据，不显著）—— 非对称波动率设定带来预测损失改进，与 leverage/asymmetry 效应 consistent（本实验不做参数级 leverage 识别）。
+- MLP vs GARCH-t：10% Holm p=0.0227（显著更差）、1% Holm p=0.0790（不显著）、5% Holm p=1.0000（不显著）—— 负结果有 tail 依赖。
+- DM 与 bootstrap 不一致处（如 1% tail 的 GARCH-t vs MLP：raw DM p 显著但 bootstrap p=0.09）如实报告为 inference sensitive to dependence/finite-sample procedure。
 
 ## 10. Neural 是否有 absolute incremental value？
 
-- **没有绝对增量**：MLP 三 tail pinball 均高于 GARCH 族；1%/10% tail 对 GARCH-t/LinQR 的差异 Holm 显著。
+- **没有绝对增量**：MLP 三 tail pinball 均高于 GARCH 族；对 GARCH-t 的劣势仅 10% tail Holm 显著（p=0.023），1%/5% tail 不显著（p=0.079 / 1.000）。
 - 修正后 MLP 与线性差距缩小（5% tail 不显著）：Scheme B 标准化改善了 MLP 训练；joint loss + non-crossing 是方法差异而非完美纯结构控制。
-- GRU：1% tail 严重过度违例（3.6%±0.36%，seed std 最大）—— seed sensitivity 如实报告。
+- GRU：1% tail 严重过度违例（0.0398 ± 0.0034，seed std 最大）—— seed sensitivity 如实报告。
 
 ## 11. seed robustness（n_seeds=3：42 primary + 7/2026）
 
@@ -129,23 +140,23 @@
 |---|---|---|
 | H1 HS regime adaptation lag | strongly supported | 2008-2009 违例率远超目标、平静期（2013-14/2017）违例率极低 —— 双向滞后（slow two-sided regime adaptation） |
 | H2 GARCH 型波动率模型改善 VaR | supported, calibration mixed | proper loss 三 tail 最低；但覆盖并非全面通过（1% UC 拒绝、5% CC 拒绝） |
-| H3a RV 增量 | supported（主要在 5%/10% tail） | F0→F1 pinball 下降（线性 -4.4%） |
-| H3b BV 条件增量 | unsupported | F1→F2 ≈ 0 |
-| H4 MLP 绝对增量 | unsupported | 三 tail pinball 均不优于 GARCH 族；1%/10% Holm 显著更差 |
-| H5 非线性映射价值 | unsupported / inconclusive | 10% tail 显著更差（Holm p=0.0015）；1%/5% 无清晰优势；joint loss+non-crossing 使其非纯 mapping control |
+| H3a RV 增量 | supported（tail 依赖） | F0→F1：LinQR 5%/10% 改善、MLP 1%/5% 改善（见 §7 动态数字） |
+| H3b BV 条件增量 | model-dependent | LinQR ≈0 或略负；MLP 各 tail 均有改善（1% 最明显，-10.9%）—— 无 model-agnostic 一致增量 |
+| H4 MLP 绝对增量 | unsupported | 三 tail pinball 均不优于 GARCH 族；仅 10% Holm 显著更差（p=0.023） |
+| H5 非线性映射价值 | unsupported / inconclusive | 10% tail 显著更差（Holm p=0.0227）；1%/5% 无清晰优势；joint loss+non-crossing 使其非纯 mapping control |
 | H6 tail 依赖的相对表现 | supported | 校准与 DM 差异随 tail 明显变化（GJR 5/10% 显著、1% 方向性） |
-| H7 jump/downside block 极端 tail 增量 | not identified | F3 为联合 block 且总体无稳定增量；无 component identification |
+| H7 jump/downside block 极端 tail 增量 | not identified | F3 为联合 block 且各 model×tail 无稳定正增量；无 component identification |
 
 ## 13. 哪些结论可靠，哪些只是描述性
 
-**可靠**（检验功效充分）：GARCH 族 sharpness 优势（三 tail pinball 最低）；GJR vs GARCH-t 的 leverage 增量（Holm 校正显著）；HS 违例聚集（Ind p<0.001）；MLP 1%/10% 显著劣于 GARCH-t/LinQR；危机期 HS 滞后。
+**可靠**（检验功效充分）：GARCH 族 sharpness 优势（三 tail pinball 最低）；GJR vs GARCH-t 的 leverage 增量（Holm 校正显著）；HS 违例聚集（Ind p<0.001）；MLP 10% tail 显著劣于 GARCH-t/LinQR（Holm p=0.023，1%/5% 非显著属证据不足而非等价）；危机期 HS 滞后。
 
 **描述性/有限样本**：1% tail 各检验功效低（期望违例 ~26 个）；5% tail MLP vs GARCH-t 不显著属于证据不足而非等价；bootstrap 与 DM 不一致处；F3 整块效果的成分归因。
 
 ## 14. 项目主要局限
 
 - 1% tail 期望违例少，覆盖检验功效低；单一资产（SPY ETF）；2018 数据仅至 6 月；rv5/bv 为日度聚合。
-- NN 计算成本约为经典模型 10 倍且无绝对增量；GRU 1% tail seed sensitivity（std 0.36%）。
+- NN 计算成本约为经典模型 10 倍且无绝对增量；GRU 1% tail seed sensitivity（std 0.0034）。
 - **NN 训练协议局限**：early stopping 用窗口最后 10% 做验证集，最佳 epoch 确定后未在完整窗口 refit —— NN 实际梯度训练仅用约 90% 的窗口（W=1500 时约 1350 天），且被排除的恰是最新约 150 天；GARCH/分位数回归用全窗口。本轮按研究纪律未改（final 已看过，改训练协议有 test-driven 嫌疑），列为明确 limitation。
 - **Neural 搜索功效有限**：搜索仅 101 个 rolling origins（2006-2007 每 5 日取 1），selection criterion 为三 tail pinball 未归一化平均（10% 尺度天然更大 → 权重更高）；grid 预先声明未扩大。
 - DM vs bootstrap 在极端 tail 结论不一致处只能如实呈现。
@@ -154,7 +165,7 @@
 
 1. **为什么旧 GARCH VaR 错，错多少？** 标准化 Student-t 分位数 = t_ppf × sqrt((ν-2)/ν)；ν=6 时 1% 分位数 -3.14 vs -2.57（约 22% 高估），违例率被系统性压低。
 2. **为什么按 target date 划分 dev/final？** 预测 t+1 的 origin 在 t，观察属于 t+1 的信息集边界；origin 2007-12-31 的预测目标 2008-01-02 属于 final。
-3. **GJR 的 leverage 增量如何被证明？** GJR-t vs GARCH-t 的 DM Holm p<0.01（5%/10%），γ 项捕捉负冲击放大。
+3. **GJR 的 leverage 增量如何被证明？** GJR-t vs GARCH-t 的 DM Holm p=0.006/0.023（5%/10%），γ 项捕捉负冲击放大。
 4. **为什么 MLP 负结果可信？** 同信息集 vs 线性（F0-F3 共享）、三种子稳健、Holm 校正的 headline DM、Scheme B 标准化排除初始化干扰。
 5. **冻结门禁怎么防造假？** data/config/code signature + 工作树检查 + effective data path + canonical run 隔离 + 实验签名复用校验。
 

@@ -44,6 +44,32 @@ def _run(script: str, cfg: str, data: str, out: str) -> subprocess.CompletedProc
     )
 
 
+def test_canonical_run_dir_rejects_stale_marker(tmp_path):
+    """A current_run.json that disagrees with freeze.json must fail closed."""
+    sys.path.insert(0, str(ROOT))
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from scripts.common import canonical_run_dir
+
+    out = tmp_path / "out"
+    (out / "manifests").mkdir(parents=True)
+    run_dir = out / "runs" / "abc123456789-deadbeef"
+    run_dir.mkdir(parents=True)
+    freeze = {"git_commit": "a" * 40, "config_sha256": "b" * 64, "data_sha256": "c" * 64}
+    (out / "manifests" / "freeze.json").write_text(json.dumps(freeze), encoding="utf-8")
+    current = {
+        "run_dir": str(run_dir),
+        "git_commit": "a" * 40,
+        "config_sha256": "b" * 64,
+        "data_sha256": "c" * 64,
+    }
+    (out / "manifests" / "current_run.json").write_text(json.dumps(current), encoding="utf-8")
+    assert canonical_run_dir(out) == run_dir
+    current["config_sha256"] = "d" * 64
+    (out / "manifests" / "current_run.json").write_text(json.dumps(current), encoding="utf-8")
+    with pytest.raises(SystemExit):
+        canonical_run_dir(out)
+
+
 def test_run_final_refused_before_freeze(smoke_env):
     cfg, data, out = smoke_env
     r = _run("run_final.py", cfg, data, out)
