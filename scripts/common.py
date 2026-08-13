@@ -67,13 +67,19 @@ def forecast_origins(
     window: int,
     min_history: int = 0,
 ) -> np.ndarray:
-    """返回 [start, end] 内且历史充足的预测原点位置（整数位置）。"""
+    """按目标日期返回预测原点位置（整数位置）。
+
+    研究分区按被预测的 target date 定义：origin 位置 pos 的
+    target 是 df.index[pos + 1]。返回所有 target 落在
+    [start_date, end_date] 内且历史充足的 origin。
+    审计修复（2026-08-13）：旧实现按 origin date 过滤，
+    导致 2007-12-31 的 origin（target 2008-01-02）被错误归入 development。
+    """
     dates = df.index
     first = window + min_history
     positions = np.arange(first, len(df) - 1)
-    mask = (dates[positions] >= pd.Timestamp(start_date)) & (
-        dates[positions] <= pd.Timestamp(end_date)
-    )
+    targets = dates[positions + 1]
+    mask = (targets >= pd.Timestamp(start_date)) & (targets <= pd.Timestamp(end_date))
     return positions[mask]
 
 
