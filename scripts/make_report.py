@@ -187,16 +187,22 @@ def _conclusion_latex(metrics, dm, regime):
     h_m1m3_10 = dmcell("M1", "M3", 0.10, pcol)
     h_m2m3_10 = dmcell("M2", "M3", 0.10, pcol)
     fr_m5_1 = cell("M5", 0.01, "failure_rate")
+    def sig(pv):
+        return "significant" if pv < 0.05 else "not significant"
+    m1m3_1_w = sig(h_m1m3_1)
+    m1m3_10_w = sig(h_m1m3_10)
+    m1m3_5_w = "not statistically decisive" if h_m1m3_5 >= 0.05 else "significant"
+    m2m3_10_w = sig(h_m2m3_10)
     neural_s = ("The neural models do not deliver consistent absolute out-of-sample improvements over "
-                "the classical baselines: the MLP is significantly worse than GARCH-t at the 1\\%% and "
-                "10\\%% tails (Holm-corrected DM p=%.4f and %.4f), while the 5\\%% difference is not "
-                "statistically decisive (Holm p=%.4f); versus the linear quantile model it is "
-                "significantly worse at the 10\\%% tail (Holm p=%.4f). The GRU is strongly "
-                "under-conservative at the 1\\%% tail (failure rate %.4f, far above the 1\\%% nominal), "
-                "with the largest across-seed dispersion of the neural models. Under the pre-specified "
-                "architecture family and development-only tuning, this is a valid negative result for "
-                "this information set and sample; it should not be generalized to all neural VaR "
-                "architectures.") % (h_m1m3_1, h_m1m3_10, h_m1m3_5, h_m2m3_10, fr_m5_1)
+                "the classical baselines: the MLP versus GARCH-t is %s at the 1\\%% tail (Holm-corrected "
+                "DM p=%.4f) and %s at the 10\\%% tail (Holm p=%.4f), while the 5\\%% difference is %s "
+                "(Holm p=%.4f); versus the linear quantile model it is %s at the 10\\%% tail (Holm "
+                "p=%.4f). The GRU is strongly under-conservative at the 1\\%% tail (failure rate %.4f, "
+                "far above the 1\\%% nominal), with the largest across-seed dispersion of the neural "
+                "models. Under the pre-specified architecture family and development-only tuning, this "
+                "is a valid negative result for this information set and sample; it should not be "
+                "generalized to all neural VaR architectures.") % (
+        m1m3_1_w, h_m1m3_1, m1m3_10_w, h_m1m3_10, m1m3_5_w, h_m1m3_5, m2m3_10_w, h_m2m3_10, fr_m5_1)
     lines.append(neural_s)
 
     # ablation: marginal deltas at the 5% tail

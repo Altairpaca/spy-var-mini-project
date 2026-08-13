@@ -101,9 +101,9 @@ All models evaluated on \texttt{2641} identical forecast dates ($\ge$ 2008-01-01
 HS & 2641 & 41 & 0.0155 & 0.0083 & 0.0000 & 0.0000 & 0.0006\\
 GARCH-t & 2641 & 40 & 0.0151 & 0.0135 & 0.1484 & 0.0167 & 0.0004\\
 LinQR & 2641 & 57 & 0.0216 & 0.0000 & 0.0411 & 0.0000 & 0.0005\\
-MLP & 2641 & 87 & 0.0329 & 0.0000 & 0.0091 & 0.0000 & 0.0005\\
+MLP & 2641 & 61 & 0.0231 & 0.0000 & 0.0654 & 0.0000 & 0.0004\\
 GJR-t & 2641 & 38 & 0.0144 & 0.0334 & 0.5766 & 0.0891 & 0.0003\\
-GRU & 2641 & 85 & 0.0322 & 0.0000 & 0.0001 & 0.0000 & 0.0006\\
+GRU & 2641 & 96 & 0.0363 & 0.0000 & 0.0002 & 0.0000 & 0.0007\\
 \hline
 \multicolumn{8}{l}{\textbf{Tail 5\%}}\\
 \hline
@@ -111,9 +111,9 @@ GRU & 2641 & 85 & 0.0322 & 0.0000 & 0.0001 & 0.0000 & 0.0006\\
 HS & 2641 & 140 & 0.0530 & 0.4819 & 0.0000 & 0.0002 & 0.0017\\
 GARCH-t & 2641 & 166 & 0.0629 & 0.0035 & 0.2304 & 0.0069 & 0.0013\\
 LinQR & 2641 & 161 & 0.0610 & 0.0123 & 0.0020 & 0.0004 & 0.0013\\
-MLP & 2641 & 145 & 0.0549 & 0.2547 & 0.0010 & 0.0023 & 0.0013\\
+MLP & 2641 & 152 & 0.0576 & 0.0816 & 0.0182 & 0.0135 & 0.0013\\
 GJR-t & 2641 & 167 & 0.0632 & 0.0027 & 0.3814 & 0.0075 & 0.0013\\
-GRU & 2641 & 177 & 0.0670 & 0.0001 & 0.0195 & 0.0000 & 0.0015\\
+GRU & 2641 & 178 & 0.0674 & 0.0001 & 0.0106 & 0.0000 & 0.0015\\
 \hline
 \multicolumn{8}{l}{\textbf{Tail 10\%}}\\
 \hline
@@ -121,9 +121,9 @@ GRU & 2641 & 177 & 0.0670 & 0.0001 & 0.0195 & 0.0000 & 0.0015\\
 HS & 2641 & 255 & 0.0966 & 0.5530 & 0.0006 & 0.0022 & 0.0024\\
 GARCH-t & 2641 & 300 & 0.1136 & 0.0224 & 0.2361 & 0.0365 & 0.0021\\
 LinQR & 2641 & 297 & 0.1125 & 0.0360 & 0.1042 & 0.0297 & 0.0021\\
-MLP & 2641 & 254 & 0.0962 & 0.5100 & 0.0043 & 0.0137 & 0.0022\\
+MLP & 2641 & 256 & 0.0969 & 0.5976 & 0.0016 & 0.0060 & 0.0022\\
 GJR-t & 2641 & 285 & 0.1079 & 0.1802 & 0.0648 & 0.0740 & 0.0020\\
-GRU & 2641 & 308 & 0.1166 & 0.0054 & 0.0655 & 0.0038 & 0.0022\\
+GRU & 2641 & 357 & 0.1352 & 0.0000 & 0.0395 & 0.0000 & 0.0022\\
 \hline
 \end{tabular}
 \end{table}
@@ -151,18 +151,18 @@ M2-F2 & 10\% & 0.1121 & 0.0021\\
 M2-F3 & 1\% & 0.0216 & 0.0005\\
 M2-F3 & 5\% & 0.0610 & 0.0013\\
 M2-F3 & 10\% & 0.1125 & 0.0021\\
-M3-F0 & 1\% & 0.0360 & 0.0005\\
-M3-F0 & 5\% & 0.0613 & 0.0014\\
-M3-F0 & 10\% & 0.0984 & 0.0022\\
-M3-F1 & 1\% & 0.0310 & 0.0004\\
-M3-F1 & 5\% & 0.0568 & 0.0013\\
-M3-F1 & 10\% & 0.0973 & 0.0022\\
-M3-F2 & 1\% & 0.0303 & 0.0004\\
-M3-F2 & 5\% & 0.0625 & 0.0013\\
-M3-F2 & 10\% & 0.0981 & 0.0022\\
-M3-F3 & 1\% & 0.0329 & 0.0005\\
-M3-F3 & 5\% & 0.0549 & 0.0013\\
-M3-F3 & 10\% & 0.0962 & 0.0022\\
+M3-F0 & 1\% & 0.0265 & 0.0005\\
+M3-F0 & 5\% & 0.0545 & 0.0014\\
+M3-F0 & 10\% & 0.1026 & 0.0022\\
+M3-F1 & 1\% & 0.0314 & 0.0005\\
+M3-F1 & 5\% & 0.0545 & 0.0013\\
+M3-F1 & 10\% & 0.0966 & 0.0022\\
+M3-F2 & 1\% & 0.0273 & 0.0004\\
+M3-F2 & 5\% & 0.0579 & 0.0013\\
+M3-F2 & 10\% & 0.0988 & 0.0022\\
+M3-F3 & 1\% & 0.0231 & 0.0004\\
+M3-F3 & 5\% & 0.0576 & 0.0013\\
+M3-F3 & 10\% & 0.0969 & 0.0022\\
 \end{tabular}
 \end{table}
 
@@ -174,12 +174,12 @@ Figure~\ref{fig:regime} and Table~\ref{tab:regime} stratify frozen results into 
 \caption{Failure rate by regime (primary configuration per model).}\label{tab:regime}
 \begin{tabular}{lrrrrrr}
 \textbf{Regime} & GARCH-t & GJR-t & GRU & HS & LinQR & MLP\\
-calm\_2013\_2014 & 0.0556 & 0.0556 & 0.0516 & 0.0020 & 0.0575 & 0.0437\\
-calm\_2017 & 0.0239 & 0.0199 & 0.0239 & 0.0120 & 0.0239 & 0.0239\\
-crisis\_2008\_2009 & 0.0772 & 0.0792 & 0.1366 & 0.1564 & 0.0772 & 0.0733\\
-elevated\_2010\_2012 & 0.0690 & 0.0650 & 0.0544 & 0.0345 & 0.0663 & 0.0477\\
-spike\_2018 & 0.0894 & 0.0894 & 0.1138 & 0.1057 & 0.0976 & 0.0976\\
-stress\_2015\_2016 & 0.0595 & 0.0675 & 0.0417 & 0.0357 & 0.0496 & 0.0635\\
+calm\_2013\_2014 & 0.0556 & 0.0556 & 0.0536 & 0.0020 & 0.0575 & 0.0456\\
+calm\_2017 & 0.0239 & 0.0199 & 0.0279 & 0.0120 & 0.0239 & 0.0199\\
+crisis\_2008\_2009 & 0.0772 & 0.0792 & 0.1327 & 0.1564 & 0.0772 & 0.0713\\
+elevated\_2010\_2012 & 0.0690 & 0.0650 & 0.0504 & 0.0345 & 0.0663 & 0.0544\\
+spike\_2018 & 0.0894 & 0.0894 & 0.1220 & 0.1057 & 0.0976 & 0.1138\\
+stress\_2015\_2016 & 0.0595 & 0.0675 & 0.0476 & 0.0357 & 0.0496 & 0.0655\\
 \end{tabular}
 \end{table}
 
@@ -191,18 +191,18 @@ Seed robustness for the neural models (predeclared seeds 7, 42, 2026; headline s
 \caption{Pairwise loss comparisons (negative DM favors model\_a).}\label{tab:dm}
 \footnotesize\begin{tabular}{llrrrrrl}
 \textbf{Pair} & \textbf{Tail} & \textbf{DM} & \textbf{DM p} & \textbf{Holm p} & \textbf{Boot p} & \textbf{Favors} & \textbf{Headline}\\
-M1 vs M3 & 1\% & -3.2383 & 0.0012 & 0.0048 & 0.0230 & a & H\\
+M1 vs M3 & 1\% & -2.0587 & 0.0395 & 0.0790 & 0.0900 & a & H\\
 M1 vs M4 & 1\% & 2.2649 & 0.0235 & 0.0705 & 0.0420 & b & H\\
-M2 vs M3 & 1\% & 0.7128 & 0.4760 & 0.4760 & 0.6360 & b & H\\
-M3 vs M5 & 1\% & -1.9747 & 0.0483 & 0.0966 & 0.3530 & a & H\\
-M1 vs M3 & 5\% & -1.6013 & 0.1093 & 0.3279 & 0.1030 & a & H\\
+M2 vs M3 & 1\% & 1.3397 & 0.1803 & 0.1803 & 0.4720 & b & H\\
+M3 vs M5 & 1\% & -2.8785 & 0.0040 & 0.0160 & 0.2270 & a & H\\
+M1 vs M3 & 5\% & -0.5033 & 0.6148 & 1.0000 & 0.6010 & a & H\\
 M1 vs M4 & 5\% & 3.1607 & 0.0016 & 0.0063 & 0.0010 & b & H\\
-M2 vs M3 & 5\% & -0.2806 & 0.7790 & 0.7790 & 0.8110 & a & H\\
-M3 vs M5 & 5\% & -1.4899 & 0.1362 & 0.3279 & 0.4520 & a & H\\
-M1 vs M3 & 10\% & -3.4866 & 0.0005 & 0.0015 & 0.0020 & a & H\\
-M1 vs M4 & 10\% & 2.7657 & 0.0057 & 0.0114 & 0.0030 & b & H\\
-M2 vs M3 & 10\% & -3.5597 & 0.0004 & 0.0015 & 0.0050 & a & H\\
-M3 vs M5 & 10\% & 0.1389 & 0.8895 & 0.8895 & 0.9330 & b & H\\
+M2 vs M3 & 5\% & 0.5166 & 0.6054 & 1.0000 & 0.6970 & b & H\\
+M3 vs M5 & 5\% & -2.2169 & 0.0266 & 0.0799 & 0.3050 & a & H\\
+M1 vs M3 & 10\% & -2.6016 & 0.0093 & 0.0227 & 0.0120 & a & H\\
+M1 vs M4 & 10\% & 2.7657 & 0.0057 & 0.0227 & 0.0030 & b & H\\
+M2 vs M3 & 10\% & -2.7286 & 0.0064 & 0.0227 & 0.0250 & a & H\\
+M3 vs M5 & 10\% & -0.6926 & 0.4886 & 0.4886 & 0.6990 & a & H\\
 \end{tabular}
 \end{table}
 
@@ -221,13 +221,13 @@ At the 1\% tail, the model with the empirical failure rate closest to the nomina
 
 At the 5\% tail, the model with the empirical failure rate closest to the nominal level is HS (0.0530 vs target 0.05); the lowest mean pinball loss is achieved by GJR-t (0.00126). Closeness of the unconditional failure frequency is not, by itself, evidence of adequate conditional VaR dynamics (see the coverage tests and the violation-clustering diagnostics below).
 
-At the 10\% tail, the model with the empirical failure rate closest to the nominal level is HS (0.0966 vs target 0.10); the lowest mean pinball loss is achieved by GJR-t (0.00204). Closeness of the unconditional failure frequency is not, by itself, evidence of adequate conditional VaR dynamics (see the coverage tests and the violation-clustering diagnostics below).
+At the 10\% tail, the model with the empirical failure rate closest to the nominal level is MLP (0.0969 vs target 0.10); the lowest mean pinball loss is achieved by GJR-t (0.00204). Closeness of the unconditional failure frequency is not, by itself, evidence of adequate conditional VaR dynamics (see the coverage tests and the violation-clustering diagnostics below).
 
 The GARCH family (GARCH-t, GJR-t) achieves the lowest mean pinball loss at all three tails. At the 1\% tail, GJR-t has the closest failure rate among the primary models (0.0144 vs 0.0151 for GARCH-t; both lie above the 1\% nominal, i.e. mildly under-conservative, and unconditional coverage rejects the nominal 1\% rate at the 5\% level for both: Kupiec p=0.0135 / 0.0334). Conditional coverage passes only for GJR-t at the 1\% tail (CC p=0.0891), while GARCH-t does not (CC p=0.0167); at the 5\% tail both fail conditional coverage (CC p=0.0069 / 0.0075). At the 10\% tail, GARCH-t fails the conditional-coverage test at the 5\% level (CC p=0.0365) whereas GJR-t does not (CC p=0.0740). At the 5\% tail HS is marginally closer to the nominal frequency (0.0530 vs 0.0629). crisis-period 5\% failure rates are 0.1564 (HS) vs 0.0772 (GARCH-t), documenting slow two-sided regime adaptation of historical simulation
 
-The neural models do not deliver consistent absolute out-of-sample improvements over the classical baselines: the MLP is significantly worse than GARCH-t at the 1\% and 10\% tails (Holm-corrected DM p=0.0048 and 0.0015), while the 5\% difference is not statistically decisive (Holm p=0.3279); versus the linear quantile model it is significantly worse at the 10\% tail (Holm p=0.0015). The GRU is strongly under-conservative at the 1\% tail (failure rate 0.0322, far above the 1\% nominal), with the largest across-seed dispersion of the neural models. Under the pre-specified architecture family and development-only tuning, this is a valid negative result for this information set and sample; it should not be generalized to all neural VaR architectures.
+The neural models do not deliver consistent absolute out-of-sample improvements over the classical baselines: the MLP versus GARCH-t is not significant at the 1\% tail (Holm-corrected DM p=0.0790) and significant at the 10\% tail (Holm p=0.0227), while the 5\% difference is not statistically decisive (Holm p=1.0000); versus the linear quantile model it is significant at the 10\% tail (Holm p=0.0227). The GRU is strongly under-conservative at the 1\% tail (failure rate 0.0363, far above the 1\% nominal), with the largest across-seed dispersion of the neural models. Under the pre-specified architecture family and development-only tuning, this is a valid negative result for this information set and sample; it should not be generalized to all neural VaR architectures.
 
-Feature ablations at the 5\% tail (LinQR: RV $\rightarrow$ 4.4\%, BV$|$RV 0.1\%, F3 block -1.0\%, MLP: RV $\rightarrow$ 3.8\%, BV$|$RV -0.7\%, F3 block -1.3\%): realized volatility is the only clearly useful incremental realized-measure block; bipower variation contributes little once RV is observed; the F3 jump/downside block does not provide stable out-of-sample gains. The F3 effect is attributed to the block as a whole, not to any single component.
+Feature ablations at the 5\% tail (LinQR: RV $\rightarrow$ 4.4\%, BV$|$RV 0.1\%, F3 block -1.0\%, MLP: RV $\rightarrow$ 2.0\%, BV$|$RV 2.8\%, F3 block -0.7\%): realized volatility is the only clearly useful incremental realized-measure block; bipower variation contributes little once RV is observed; the F3 jump/downside block does not provide stable out-of-sample gains. The F3 effect is attributed to the block as a whole, not to any single component.
 
 \section{References}
 \begin{itemize}
@@ -257,49 +257,49 @@ The complete 45-row pairwise Diebold--Mariano comparison matrix (exploratory; th
 \textbf{Pair} & \textbf{Tail} & \textbf{DM} & \textbf{DM p} & \textbf{Holm p} & \textbf{Boot p} & \textbf{Favors} & \textbf{Headline}\\
 M0 vs M1 & 1\% & 3.8448 & 0.0001 & -- & 0.2020 & b & \\
 M0 vs M2 & 1\% & 2.0039 & 0.0451 & -- & 0.1230 & b & \\
-M0 vs M3 & 1\% & 2.4069 & 0.0161 & -- & 0.2550 & b & \\
+M0 vs M3 & 1\% & 3.3399 & 0.0008 & -- & 0.2090 & b & \\
 M0 vs M4 & 1\% & 4.0951 & 0.0000 & -- & 0.1870 & b & \\
-M0 vs M5 & 1\% & -0.3931 & 0.6942 & -- & 0.8390 & a & \\
+M0 vs M5 & 1\% & -1.3604 & 0.1737 & -- & 0.4790 & a & \\
 M1 vs M2 & 1\% & -1.9828 & 0.0474 & -- & 0.3570 & a & \\
-M1 vs M3 & 1\% & -3.2383 & 0.0012 & 0.0048 & 0.0230 & a & H\\
+M1 vs M3 & 1\% & -2.0587 & 0.0395 & 0.0790 & 0.0900 & a & H\\
 M1 vs M4 & 1\% & 2.2649 & 0.0235 & 0.0705 & 0.0420 & b & H\\
-M1 vs M5 & 1\% & -2.9899 & 0.0028 & -- & 0.2280 & a & \\
-M2 vs M3 & 1\% & 0.7128 & 0.4760 & 0.4760 & 0.6360 & b & H\\
+M1 vs M5 & 1\% & -3.2243 & 0.0013 & -- & 0.2080 & a & \\
+M2 vs M3 & 1\% & 1.3397 & 0.1803 & 0.1803 & 0.4720 & b & H\\
 M2 vs M4 & 1\% & 2.2050 & 0.0275 & -- & 0.3340 & b & \\
-M2 vs M5 & 1\% & -1.7255 & 0.0844 & -- & 0.2800 & a & \\
-M3 vs M4 & 1\% & 3.4294 & 0.0006 & -- & 0.0220 & b & \\
-M3 vs M5 & 1\% & -1.9747 & 0.0483 & 0.0966 & 0.3530 & a & H\\
-M4 vs M5 & 1\% & -3.1697 & 0.0015 & -- & 0.2090 & a & \\
+M2 vs M5 & 1\% & -2.2740 & 0.0230 & -- & 0.2170 & a & \\
+M3 vs M4 & 1\% & 2.4669 & 0.0136 & -- & 0.0580 & b & \\
+M3 vs M5 & 1\% & -2.8785 & 0.0040 & 0.0160 & 0.2270 & a & H\\
+M4 vs M5 & 1\% & -3.3619 & 0.0008 & -- & 0.1910 & a & \\
 M0 vs M1 & 5\% & 4.5636 & 0.0000 & -- & 0.0770 & b & \\
 M0 vs M2 & 5\% & 4.7905 & 0.0000 & -- & 0.0400 & b & \\
-M0 vs M3 & 5\% & 3.6165 & 0.0003 & -- & 0.1170 & b & \\
+M0 vs M3 & 5\% & 4.0315 & 0.0001 & -- & 0.0910 & b & \\
 M0 vs M4 & 5\% & 4.8280 & 0.0000 & -- & 0.0520 & b & \\
-M0 vs M5 & 5\% & 7.1295 & 0.0000 & -- & 0.0010 & b & \\
+M0 vs M5 & 5\% & 7.2079 & 0.0000 & -- & 0.0010 & b & \\
 M1 vs M2 & 5\% & -1.0079 & 0.3135 & -- & 0.4600 & a & \\
-M1 vs M3 & 5\% & -1.6013 & 0.1093 & 0.3279 & 0.1030 & a & H\\
+M1 vs M3 & 5\% & -0.5033 & 0.6148 & 1.0000 & 0.6010 & a & H\\
 M1 vs M4 & 5\% & 3.1607 & 0.0016 & 0.0063 & 0.0010 & b & H\\
-M1 vs M5 & 5\% & -2.3238 & 0.0201 & -- & 0.2890 & a & \\
-M2 vs M3 & 5\% & -0.2806 & 0.7790 & 0.7790 & 0.8110 & a & H\\
+M1 vs M5 & 5\% & -2.6090 & 0.0091 & -- & 0.2620 & a & \\
+M2 vs M3 & 5\% & 0.5166 & 0.6054 & 1.0000 & 0.6970 & b & H\\
 M2 vs M4 & 5\% & 1.9230 & 0.0545 & -- & 0.2270 & b & \\
-M2 vs M5 & 5\% & -2.2333 & 0.0255 & -- & 0.2450 & a & \\
-M3 vs M4 & 5\% & 2.6703 & 0.0076 & -- & 0.0100 & b & \\
-M3 vs M5 & 5\% & -1.4899 & 0.1362 & 0.3279 & 0.4520 & a & H\\
-M4 vs M5 & 5\% & -2.7447 & 0.0061 & -- & 0.2220 & a & \\
+M2 vs M5 & 5\% & -2.5373 & 0.0112 & -- & 0.2290 & a & \\
+M3 vs M4 & 5\% & 1.5973 & 0.1102 & -- & 0.0980 & b & \\
+M3 vs M5 & 5\% & -2.2169 & 0.0266 & 0.0799 & 0.3050 & a & H\\
+M4 vs M5 & 5\% & -2.9635 & 0.0030 & -- & 0.2140 & a & \\
 M0 vs M1 & 10\% & 4.8013 & 0.0000 & -- & 0.0510 & b & \\
 M0 vs M2 & 10\% & 4.9154 & 0.0000 & -- & 0.0300 & b & \\
-M0 vs M3 & 10\% & 2.2617 & 0.0237 & -- & 0.1920 & b & \\
+M0 vs M3 & 10\% & 2.7171 & 0.0066 & -- & 0.1410 & b & \\
 M0 vs M4 & 10\% & 5.0337 & 0.0000 & -- & 0.0290 & b & \\
-M0 vs M5 & 10\% & 5.5823 & 0.0000 & -- & 0.0010 & b & \\
+M0 vs M5 & 10\% & 5.3083 & 0.0000 & -- & 0.0010 & b & \\
 M1 vs M2 & 10\% & -0.1940 & 0.8462 & -- & 0.8530 & a & \\
-M1 vs M3 & 10\% & -3.4866 & 0.0005 & 0.0015 & 0.0020 & a & H\\
-M1 vs M4 & 10\% & 2.7657 & 0.0057 & 0.0114 & 0.0030 & b & H\\
-M1 vs M5 & 10\% & -2.3423 & 0.0192 & -- & 0.2750 & a & \\
-M2 vs M3 & 10\% & -3.5597 & 0.0004 & 0.0015 & 0.0050 & a & H\\
+M1 vs M3 & 10\% & -2.6016 & 0.0093 & 0.0227 & 0.0120 & a & H\\
+M1 vs M4 & 10\% & 2.7657 & 0.0057 & 0.0227 & 0.0030 & b & H\\
+M1 vs M5 & 10\% & -2.5975 & 0.0094 & -- & 0.2490 & a & \\
+M2 vs M3 & 10\% & -2.7286 & 0.0064 & 0.0227 & 0.0250 & a & H\\
 M2 vs M4 & 10\% & 1.0913 & 0.2751 & -- & 0.3070 & b & \\
-M2 vs M5 & 10\% & -2.6403 & 0.0083 & -- & 0.1940 & a & \\
-M3 vs M4 & 10\% & 4.3462 & 0.0000 & -- & 0.0010 & b & \\
-M3 vs M5 & 10\% & 0.1389 & 0.8895 & 0.8895 & 0.9330 & b & H\\
-M4 vs M5 & 10\% & -2.7877 & 0.0053 & -- & 0.2060 & a & \\
+M2 vs M5 & 10\% & -2.7651 & 0.0057 & -- & 0.1820 & a & \\
+M3 vs M4 & 10\% & 3.4390 & 0.0006 & -- & 0.0020 & b & \\
+M3 vs M5 & 10\% & -0.6926 & 0.4886 & 0.4886 & 0.6990 & a & H\\
+M4 vs M5 & 10\% & -2.9867 & 0.0028 & -- & 0.1840 & a & \\
 \end{tabular}
 \end{table}
 
@@ -307,46 +307,46 @@ M4 vs M5 & 10\% & -2.7877 & 0.0053 & -- & 0.2060 & a & \\
 \url{docs/DATA\_AUDIT.md} (generated by \texttt{scripts/audit\_data.py}).
 
 \section{Artifacts}
-All prediction panels: \path{../outputs/runs/230b3e9702b1-09a350fe/predictions/*.parquet} with sidecar manifests; metric tables: \path{../outputs/runs/230b3e9702b1-09a350fe/tables/*.csv}; figures: \path{../outputs/runs/230b3e9702b1-09a350fe/figures/*.png}. Freeze manifest: \texttt{docs/FREEZE\_MANIFEST.md}.
+All prediction panels: \path{../outputs/runs/e34928235ed6-058d5aea/predictions/*.parquet} with sidecar manifests; metric tables: \path{../outputs/runs/e34928235ed6-058d5aea/tables/*.csv}; figures: \path{../outputs/runs/e34928235ed6-058d5aea/figures/*.png}. Freeze manifest: \texttt{docs/FREEZE\_MANIFEST.md}.
 
 \begin{figure}[ht]
-\centering\includegraphics[width=\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig01_overview.png}
+\centering\includegraphics[width=\textwidth]{../outputs/runs/e34928235ed6-058d5aea/figures/fig01_overview.png}
 \caption{SPY log returns and volatility scale, full sample.}\label{fig:overview}
 \end{figure}
 \begin{figure}[ht]
-\centering\includegraphics[width=\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig02_rv_bv.png}
+\centering\includegraphics[width=\textwidth]{../outputs/runs/e34928235ed6-058d5aea/figures/fig02_rv_bv.png}
 \caption{Realized variance and bipower variation (log scale).}\label{fig:rvbv}
 \end{figure}
 \begin{figure}[ht]
-\centering\includegraphics[width=\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig03_var_curves.png}
+\centering\includegraphics[width=\textwidth]{../outputs/runs/e34928235ed6-058d5aea/figures/fig03_var_curves.png}
 \caption{Frozen out-of-sample realized returns with dynamic VaR forecasts.}
 \end{figure}
 \begin{figure}[ht]
-\centering\includegraphics[width=\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig04_violations.png}
+\centering\includegraphics[width=\textwidth]{../outputs/runs/e34928235ed6-058d5aea/figures/fig04_violations.png}
 \caption{1\% VaR violation points by model.}
 \end{figure}
 \begin{figure}[ht]
-\centering\includegraphics[width=0.85\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig05_failure_rates.png}
+\centering\includegraphics[width=0.85\textwidth]{../outputs/runs/e34928235ed6-058d5aea/figures/fig05_failure_rates.png}
 \caption{Empirical failure rates vs target coverage.}
 \end{figure}
 \begin{figure}[ht]
-\centering\includegraphics[width=0.85\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig06_pinball.png}
+\centering\includegraphics[width=0.85\textwidth]{../outputs/runs/e34928235ed6-058d5aea/figures/fig06_pinball.png}
 \caption{Mean pinball loss by model and tail.}
 \end{figure}
 \begin{figure}[ht]
-\centering\includegraphics[width=0.6\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig07_tail_model.png}
+\centering\includegraphics[width=0.6\textwidth]{../outputs/runs/e34928235ed6-058d5aea/figures/fig07_tail_model.png}
 \caption{Pinball loss relative to best model per tail.}\label{fig:tailmodel}
 \end{figure}
 \begin{figure}[ht]
-\centering\includegraphics[width=0.8\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig08_ablation.png}
+\centering\includegraphics[width=0.8\textwidth]{../outputs/runs/e34928235ed6-058d5aea/figures/fig08_ablation.png}
 \caption{Feature ablation F0--F3 for linear quantile regression and MLP.}\label{fig:ablation}
 \end{figure}
 \begin{figure}[ht]
-\centering\includegraphics[width=\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig09_regime.png}
+\centering\includegraphics[width=\textwidth]{../outputs/runs/e34928235ed6-058d5aea/figures/fig09_regime.png}
 \caption{Failure rate by regime.}\label{fig:regime}
 \end{figure}
 \begin{figure}[ht]
-\centering\includegraphics[width=0.8\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig10_seed_robustness.png}
+\centering\includegraphics[width=0.8\textwidth]{../outputs/runs/e34928235ed6-058d5aea/figures/fig10_seed_robustness.png}
 \caption{Neural seed robustness.}
 \end{figure}
 
