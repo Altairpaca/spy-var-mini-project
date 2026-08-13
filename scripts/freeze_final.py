@@ -21,7 +21,6 @@ from spyvar.freeze import write_freeze_manifest
 
 def main() -> None:
     args = parse_common_args("final-test 冻结")
-    parser_extra = None  # parse_common_args 已处理 --config/--data/--workers/--out-root
     docs_dir = getattr(args, "docs_dir", None)
     cfg = resolve_config(args)
     if docs_dir is None:
@@ -62,7 +61,7 @@ def main() -> None:
     print("冻结完成:")
     for k in ("git_commit", "config_sha256", "data_sha256", "primary_window"):
         print(f"  {k}: {manifest[k]}")
-    print(f"  manifest -> docs/FREEZE_MANIFEST.md")
+    print("  manifest -> docs/FREEZE_MANIFEST.md")
 
 
 if __name__ == "__main__":

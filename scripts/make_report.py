@@ -117,8 +117,6 @@ def _conclusion_latex(metrics: pd.DataFrame, dm: pd.DataFrame, regime: pd.DataFr
         "e.g. 5% failure rate 15.7% vs 6.4% in 2008--2009), and the 10% conditional-coverage test is rejected for "
         "the GARCH family (CC p $<$ 0.01), so the GARCH calibration advantage is strongest at the extreme 1% tail."
     )
-    m1vsm3 = dm[(dm["model_a"] == "M1") & (dm["model_b"] == "M3")]
-    worst_dm = m1vsm3.loc[m1vsm3["dm_pvalue"].idxmax()]
     lines.append(
         "The neural models do not outperform the classical baselines on this frozen panel: the MLP is significantly worse "
         "than both GARCH-t and the linear quantile model on the DM test at all tails (p $<$ 0.001), and the GRU is strongly "

@@ -28,7 +28,7 @@ def _load(out_root: Path):
 
 
 def build(out_root: Path) -> str:
-    metrics, dm, regime, ablation = _load(out_root)
+    metrics, _dm, regime, ablation = _load(out_root)
     m = metrics[metrics.apply(lambda r: PRIMARY.get(r["model"]) == r["feature_set"], axis=1)]
     L = []
     L.append("# 中文审计摘要（FINAL_SUMMARY_ZH）")
