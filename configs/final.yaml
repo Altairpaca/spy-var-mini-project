@@ -1,0 +1,139 @@
+data:
+  path: data/raw/spy_data.csv
+  sha256: null
+dates:
+  development_end: '2007-12-31'
+  final_test_start: '2008-01-01'
+tails:
+- 0.01
+- 0.05
+- 0.1
+window:
+  candidates:
+  - 1000
+  - 1500
+  primary: 1500
+features:
+  max_lag: 22
+  sets:
+    F0:
+    - lag_ret_1
+    - lag_ret_2
+    - lag_ret_5
+    - lag_ret_22
+    - abs_ret_1
+    - sq_ret_1
+    - abs_ret_5d
+    F1:
+    - lag_ret_1
+    - lag_ret_2
+    - lag_ret_5
+    - lag_ret_22
+    - abs_ret_1
+    - sq_ret_1
+    - abs_ret_5d
+    - log_rv5
+    - rv5_scale
+    - log_rv5_5d
+    - log_rv5_22d
+    F2:
+    - lag_ret_1
+    - lag_ret_2
+    - lag_ret_5
+    - lag_ret_22
+    - abs_ret_1
+    - sq_ret_1
+    - abs_ret_5d
+    - log_rv5
+    - rv5_scale
+    - log_rv5_5d
+    - log_rv5_22d
+    - log_bv
+    - log_bv_5d
+    - log_bv_22d
+    F3:
+    - lag_ret_1
+    - lag_ret_2
+    - lag_ret_5
+    - lag_ret_22
+    - abs_ret_1
+    - sq_ret_1
+    - abs_ret_5d
+    - log_rv5
+    - rv5_scale
+    - log_rv5_5d
+    - log_rv5_22d
+    - log_bv
+    - log_bv_5d
+    - log_bv_22d
+    - jump
+    - jump_rel
+    - down_mean_5d
+seeds:
+  primary: 42
+  robustness:
+  - 7
+  - 2026
+models:
+  M0:
+    enabled: true
+  M1:
+    enabled: true
+  M1_gauss:
+    enabled: false
+  M2:
+    enabled: true
+  M3:
+    enabled: true
+    hidden:
+    - 32
+    dropout: 0.0
+    lr: 0.001
+    weight_decay: 0.0
+    batch_size: 128
+    epochs: 300
+    patience: 30
+    val_fraction: 0.1
+    device: cpu
+  M4:
+    enabled: true
+  M5:
+    enabled: true
+    hidden: 32
+    layers: 1
+    seq_len: 22
+    lr: 0.001
+    weight_decay: 0.0
+    batch_size: 64
+    epochs: 300
+    patience: 30
+    val_fraction: 0.1
+    device: cpu
+parallel:
+  workers: 32
+evaluation:
+  regimes:
+    crisis_2008_2009:
+    - '2008-01-01'
+    - '2009-12-31'
+    elevated_2010_2012:
+    - '2010-01-01'
+    - '2012-12-31'
+    calm_2013_2014:
+    - '2013-01-01'
+    - '2014-12-31'
+    stress_2015_2016:
+    - '2015-01-01'
+    - '2016-12-31'
+    calm_2017:
+    - '2017-01-01'
+    - '2017-12-31'
+    spike_2018:
+    - '2018-01-01'
+    - '2018-12-31'
+  dq_lags: 4
+  bootstrap:
+    B: 999
+    block: 60
+outputs:
+  root: outputs

@@ -1,0 +1,10 @@
+{
+  "freeze_id": "230b3e9702b1-09a350fe",
+  "run_dir": "outputs/runs/230b3e9702b1-09a350fe",
+  "git_commit": "230b3e9702b1dbe862af3b497aebb5bfa9a4bd36",
+  "config_sha256": "09a350fea09580175262ea8dc06e1c4416eaabae4dd311184a34a838fd3027b9",
+  "data_sha256": "277406a832c1418de30221396bd8dbf12a444c3f5430ad88c7cc75d7a7f573a3",
+  "n_origins": 2641,
+  "first_target": "2008-01-02",
+  "last_target": "2018-06-27"
+}

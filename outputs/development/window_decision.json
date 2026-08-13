@@ -1,0 +1,23 @@
+{
+  "candidates": [
+    1000,
+    1500
+  ],
+  "mean_normalized_loss": {
+    "1000": 1.0381049426050077,
+    "1500": 0.9618950573949921
+  },
+  "cell_win_counts": {
+    "1500": 23,
+    "1000": 1
+  },
+  "sensitivity_win_counts": {
+    "1500": 24
+  },
+  "mean_normalized_loss_clean": null,
+  "raw_pinball_sum_winner": 1500,
+  "disagreement": false,
+  "rule": "min equal-weight mean of candidate-relative normalized loss; disagreement -> conservative longer window",
+  "chosen_window": 1500,
+  "note": "aggregations agree"
+}
