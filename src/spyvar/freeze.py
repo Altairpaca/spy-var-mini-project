@@ -132,6 +132,24 @@ def check_freeze_ready(
         return False, "data file SHA256 mismatch with frozen value"
     if manifest.get("code_signature") != code_signature():
         return False, "code signature mismatch (src/scripts/tests changed after freeze)"
+    # git_commit in the manifest is the freeze-generation HEAD; the freeze
+    # commit that carries the manifest is its child. The frozen SHA must
+    # therefore be the current HEAD or an ancestor of it.
+    frozen_sha = manifest.get("git_commit")
+    head_sha = git_commit_sha()
+    if not frozen_sha:
+        return False, "freeze manifest missing git_commit"
+    if frozen_sha != head_sha:
+        try:
+            r = subprocess.run(
+                ["git", "merge-base", "--is-ancestor", frozen_sha, head_sha],
+                capture_output=True, timeout=30, check=False,
+            )
+            ancestor_ok = r.returncode == 0
+        except Exception:  # noqa: BLE001
+            ancestor_ok = False
+        if not ancestor_ok:
+            return False, "frozen git_commit is neither HEAD nor an ancestor (history moved)"
     if require_clean_tree:
         ok, reason = working_tree_clean()
         if not ok:
