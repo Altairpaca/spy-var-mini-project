@@ -4,10 +4,10 @@
 
 ```json
 {
-  "freeze_created_at": "2026-08-13T15:38:33+0800",
-  "git_commit": "0b76a5a7e8d804b290c4bdcbe1180dbbb5de1125",
+  "freeze_created_at": "2026-08-13T15:43:26+0800",
+  "git_commit": "e34928235ed63cea07ad2cbb09131075ecc8b290",
   "config_path": "configs/final.yaml",
-  "config_sha256": "09a350fea09580175262ea8dc06e1c4416eaabae4dd311184a34a838fd3027b9",
+  "config_sha256": "058d5aea590448898817d2db7f8e9ef68e27c67e0b292148dc93ed54725e4c86",
   "data_path": "data/raw/spy_data.csv",
   "data_sha256": "277406a832c1418de30221396bd8dbf12a444c3f5430ad88c7cc75d7a7f573a3",
   "code_signature": "875ef27a64cebc10aac6d108500a66be5db289c6074096a861e3d7417635ef44",
