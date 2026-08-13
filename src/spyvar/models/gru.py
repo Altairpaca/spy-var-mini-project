@@ -79,6 +79,13 @@ class GRUQuantile(Model):
         n_val = max(1, int(self._val_frac * len(y)))
         X_tr, X_va = X[:-n_val], X[-n_val:]
         y_tr, y_va = y[:-n_val], y[-n_val:]
+        # 与 MLP 相同的方案 B：train-only target 标准化（审计修复 2026-08-13）
+        y_mean = float(y_tr.mean())
+        y_std = float(y_tr.std())
+        if y_std < 1e-12:
+            y_std = 1.0
+        y_tr = (y_tr - y_mean) / y_std
+        y_va = (y_va - y_mean) / y_std
         flat = X_tr.reshape(-1, X_tr.shape[-1])
         mu = flat.mean(axis=0, keepdims=True)
         sd = flat.std(axis=0, keepdims=True)
@@ -119,7 +126,8 @@ class GRUQuantile(Model):
         model.load_state_dict(best_state)
         model.eval()
         with torch.no_grad():
-            q = model(torch.from_numpy(x_origin[None, ...]).to(self._device))[0].cpu().numpy()
+            q_std = model(torch.from_numpy(x_origin[None, ...]).to(self._device))[0].cpu().numpy()
+        q = q_std * y_std + y_mean
         return QuantileForecast(
             q_001=float(q[0]),
             q_005=float(q[1]),

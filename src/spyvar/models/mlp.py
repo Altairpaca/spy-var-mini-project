@@ -92,6 +92,16 @@ class MultiQuantileMLP(Model):
         n_val = max(1, int(self._val_frac * len(yv)))
         X_tr, X_va = X[:-n_val], X[-n_val:]
         y_tr, y_va = yv[:-n_val], yv[-n_val:]
+        # 方案 B（审计修复 2026-08-13）：对 target 做仅训练子集的标准化。
+        # 理由：初始 softplus gap ~0.693 远大于日收益分位差量级（~0.5-1.5pp），
+        # 在标准化空间中训练使损失梯度尺度与分位数尺度匹配，预测后反变换。
+        # 仿射变换保序，不改变 non-crossing 结构。
+        y_mean = float(y_tr.mean())
+        y_std = float(y_tr.std())
+        if y_std < 1e-12:
+            y_std = 1.0
+        y_tr = (y_tr - y_mean) / y_std
+        y_va = (y_va - y_mean) / y_std
         mu = X_tr.mean(axis=0, keepdims=True)
         sd = X_tr.std(axis=0, keepdims=True)
         sd[sd == 0] = 1.0
@@ -131,7 +141,8 @@ class MultiQuantileMLP(Model):
         model.load_state_dict(best_state)
         model.eval()
         with torch.no_grad():
-            q = model(torch.from_numpy(x_origin).to(self._device))[0].cpu().numpy()
+            q_std = model(torch.from_numpy(x_origin).to(self._device))[0].cpu().numpy()
+        q = q_std * y_std + y_mean
         return QuantileForecast(
             q_001=float(q[0]),
             q_005=float(q[1]),
