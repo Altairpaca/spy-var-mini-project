@@ -27,7 +27,7 @@ comparison of classical and small neural models.
 ## Environment
 
 ```bash
-uv sync                 # Python 3.11 + all dependencies (incl. CPU torch)
+uv sync --frozen --python 3.11   # exact environment used for the clean-clone verification
 ```
 
 Requirements: Python 3.11, about 4 GB RAM, CPU only (the NN models are tiny); GPU
@@ -79,7 +79,7 @@ python scripts/run_all.py --config configs/development.yaml --stages audit,dev,s
 
 ```bash
 python scripts/freeze_final.py --config configs/final.yaml   # validates data/config/code signatures + clean tree
-git add configs/final.yaml docs/FREEZE_MANIFEST.md docs/freeze.json
+git add configs/final.yaml docs/FREEZE_MANIFEST.md docs/freeze.json outputs/manifests/freeze.json
 git commit   # freeze commit (SHA is preserved in history)
 ```
 

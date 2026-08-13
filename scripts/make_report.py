@@ -274,6 +274,32 @@ def build_latex(cfg, out_root: Path, freeze: dict | None, audit: dict | None) ->
     seed = cfg.primary_seed
     n_dates = forecast_count(out_root)
 
+    import json as _json
+
+    manifests = sorted((out_root / "predictions").glob("final-*.manifest.json"))
+    if manifests:
+        _run_info = [_json.loads(m.read_text(encoding="utf-8")) for m in manifests]
+        _py = _run_info[0]["packages"]["python"]
+        _workers = _run_info[0]["workers"]
+        _device = _run_info[0]["device"]
+        _total = sum(float(i["runtime_seconds"]) for i in _run_info)
+        _max_id = max(_run_info, key=lambda i: i["runtime_seconds"])["model_id"]
+        _max_rt = max(float(i["runtime_seconds"]) for i in _run_info)
+        comp_setup = (
+            f"All experiments were run under Python {_py} with {_workers} process workers and "
+            "BLAS/OpenMP threads limited to one per worker. All reported final models were "
+            f"executed on {_device}; the neural models are deliberately small. The 12 primary "
+            f"frozen panels required {_total:.0f} seconds in aggregate, with the most expensive "
+            f"individual specification being {_max_id} (about {_max_rt:.0f} s). Package versions "
+            "and per-experiment runtimes are recorded in the prediction manifests "
+            "(RUNPLACEHOLDER/predictions/*.manifest.json)."
+        )
+    else:
+        comp_setup = (
+            "Package versions and per-experiment runtimes are recorded in the prediction "
+            "manifests (RUNPLACEHOLDER/predictions/*.manifest.json)."
+        )
+
     tex = r"""\documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{booktabs}
@@ -301,13 +327,16 @@ This report studies one-day-ahead Value-at-Risk (VaR) forecasting for SPY log re
 For each forecast origin $t$ we predict the conditional return quantile $q_{\alpha,t+1}$ with $P(r_{t+1}\le q_{\alpha,t+1}\mid\mathcal{F}_t)=\alpha$ for $\alpha\in\{0.01,0.05,0.10\}$, using only information available at the end of day $t$. A violation is defined as $r_{t+1}\le \hat{q}_{\alpha,t+1}$ (VaR is the return quantile itself; lower-tail values are typically negative).
 
 \section{Data}
-Daily SPY observations with columns \texttt{log\_ret}, \texttt{rv5} (5-minute realized variance) and \texttt{bv} (bipower variation). See Appendix~\ref{sec:audit} for the machine-generated data audit.
+Daily SPY observations with columns \texttt{log\_ret}, \texttt{rv5} and \texttt{bv}. \texttt{rv5} is the realized-volatility measure provided with the assignment; its numerical scale in this sample is variance-like (so that $\sqrt{\texttt{rv5}}$ is close to the daily volatility scale), which motivates considering both $\log(\texttt{rv5})$ and $\sqrt{\texttt{rv5}}$ as structured predictors. \texttt{bv} is the bipower-variation counterpart of the same realized-measure family. See Appendix~\ref{sec:audit} for the machine-generated data audit.
 
 \section{Exploratory Analysis}
 See Figures~\ref{fig:overview}--\ref{fig:rvbv}. Key features: volatility clustering, heavy tails (excess kurtosis), strong persistence of log realized measures, and a positive link between negative returns and next-day volatility.
 
 \section{Experimental Protocol}
 Development period: all dates before 2008-01-01 (rolling-origin validation over 2005--2007, with a documented slight adjustment for the 1500-day window whose earliest feasible origin is late 2005). Final test: all dates from 2008-01-01. Candidate windows: 1000 and 1500 trading days only; the primary window is chosen from development evidence (see Section~\ref{sec:dev}). All models share the same forecast dates. The final configuration and data hash are frozen in \texttt{docs/FREEZE\_MANIFEST.md} before any final-test run; the gate is enforced by tests and scripts.
+
+\section{Computational Setup}
+""" + comp_setup + r"""
 
 \section{Models}
 \subsection{M0 -- Historical Simulation}
@@ -410,6 +439,9 @@ Seed robustness for the neural models (predeclared seeds 7, 42, 2026; headline s
 \item DM/block-bootstrap inference at extreme tails relies on asymptotic approximations; results are interpreted as indicative.
 \end{itemize}
 
+\section{Potential Improvements}
+Potential extensions include refitting the neural models on the full rolling window after selecting the stopping epoch, evaluating external validity on additional liquid assets, and considering more specialized dynamic quantile models (e.g., CAViaR-type specifications). These are deliberately left for future work: introducing them after inspecting the frozen test would violate the model-selection protocol followed in this study.
+
 \section{Conclusion}
 The conclusion is drawn from the frozen out-of-sample evidence in Section~\ref{sec:oos} and the analysis sections.
 
@@ -454,7 +486,7 @@ All prediction panels: \path{RUNPLACEHOLDER/predictions/*.parquet} with sidecar 
 \end{figure}
 \begin{figure}[ht]
 \centering\includegraphics[width=\textwidth]{../outputs/figures/fig02_rv_bv.png}
-\caption{Realized variance and bipower variation (log scale).}\label{fig:rvbv}
+\caption{Realized-volatility measure and bipower variation (log scale).}\label{fig:rvbv}
 \end{figure}
 \begin{figure}[ht]
 \centering\includegraphics[width=\textwidth]{../outputs/figures/fig03_var_curves.png}

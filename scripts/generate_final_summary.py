@@ -1,8 +1,10 @@
-"""Generate docs/FINAL_SUMMARY_ZH.md (Chinese audit summary; all numbers read from artifacts).
+"""Generate docs/FINAL_SUMMARY_ZH.md (Chinese audit summary).
 
-For the researcher's own audit and interview preparation; not a formal submission.
-Every number is recomputed from the canonical frozen run, configs/final.yaml and
-docs/freeze.json; no model result, hyperparameter, SHA or p-value is hard-coded here.
+Every current final metric, hyperparameter, hash, inferential p-value and
+window-selection number is read from the canonical run, configs/final.yaml,
+docs/freeze.json and outputs/development decision files. Historical
+audit-remediation figures in section 0 are quoted from the audit record
+(docs/AUDIT_REMEDIATION.md).
 """
 
 from __future__ import annotations
@@ -52,6 +54,16 @@ def build(out_root: Path) -> str:
     cfg = yaml.safe_load((ROOT / "configs" / "final.yaml").read_text(encoding="utf-8"))
     m3, m5 = cfg["models"]["M3"], cfg["models"]["M5"]
 
+    wd = json.loads((Path(out_root) / "development" / "window_decision.json").read_text(encoding="utf-8"))
+    _chosen = str(wd["chosen_window"])
+    _other = str(wd["candidates"][0] if wd["candidates"][0] != wd["chosen_window"] else wd["candidates"][1])
+    _cells = int(sum(wd["cell_win_counts"].values()))
+    _win_cells = int(wd["cell_win_counts"].get(_chosen, 0))
+    _sens = int(wd["sensitivity_win_counts"].get(_chosen, 0))
+    _norm_chosen = float(wd["mean_normalized_loss"][_chosen])
+    _norm_other = float(wd["mean_normalized_loss"][_other])
+    _n_dev = int(pd.read_csv(Path(out_root) / "development" / "window_selection.csv").iloc[0]["n"])
+
     h_m4_5 = _dm_value(dm, "M1", "M4", 0.05, "holm_dm_pvalue")
     h_m4_10 = _dm_value(dm, "M1", "M4", 0.10, "holm_dm_pvalue")
     h_m4_1 = _dm_value(dm, "M1", "M4", 0.01, "holm_dm_pvalue")
@@ -69,6 +81,8 @@ def build(out_root: Path) -> str:
     L.append("")
     L.append("## 0. 本轮审计发现了什么（为什么旧 final 全部失效）")
     L.append("")
+    L.append("> 本节为历史审计记录（旧实现修复前的事实），数字引用自 `docs/AUDIT_REMEDIATION.md`，非当前实验结果。")
+    L.append("")
     L.append("完整记录见 `docs/AUDIT_REMEDIATION.md`。三个 correctness 问题：")
     L.append("")
     L.append("1. **Student-t VaR 尺度 bug（P0）**：旧实现直接用 `scipy.stats.t.ppf(alpha, nu)`，而 arch 的 Student-t innovation 是方差 1 的标准化分布。")
@@ -85,9 +99,9 @@ def build(out_root: Path) -> str:
     L.append("## 1. 最终实验协议（修正后）")
     L.append("")
     L.append(f"- 数据：SPY 日度 log_ret / rv5 / bv，4640 行（2000-01-04 ~ 2018-06-27），SHA256 {freeze['data_sha256'][:16]}... 冻结。")
-    L.append("- development 期：target date < 2008-01-01，rolling-origin 验证（公共目标 498 个，2006-01-06 ~ 2007-12-28）。")
+    L.append(f"- development 期：target date < 2008-01-01，rolling-origin 验证（公共目标 {_n_dev} 个，2006-01-06 ~ 2007-12-28）。")
     L.append(f"- final test（freeze manifest 记录的 git_commit {freeze['git_commit'][:12]}）：target date >= 2008-01-01，2641 个预测日（2008-01-02 ~ 2018-06-27），全部模型同日期集。")
-    L.append(f"- 冻结内容：primary window={freeze['primary_window']}（等权归一化聚合，24 cells 中 23 个偏好 1500）、M3 hidden {m3['hidden']} / lr {m3['lr']} / wd {m3['weight_decay']} / batch {m3['batch_size']}、")
+    L.append(f"- 冻结内容：primary window={freeze['primary_window']}（等权归一化聚合，{_cells} cells 中 {_win_cells} 个偏好 {_chosen}）、M3 hidden {m3['hidden']} / lr {m3['lr']} / wd {m3['weight_decay']} / batch {m3['batch_size']}、")
     L.append(f"  M5 hidden {m5['hidden']} / lr {m5['lr']} / wd {m5['weight_decay']} / batch {m5['batch_size']}、primary seed 42、robustness seeds {{7, 2026}}、config SHA256 {freeze['config_sha256'][:16]}...、data SHA256 {freeze['data_sha256'][:16]}...")
     L.append("- 零泄漏约束：特征/标准化/early-stopping 全部限制在训练窗口内（截断不变性测试锁定）；MLP/GRU target 采用 train-only 标准化（Scheme B）。")
     L.append("- 冻结门禁（强化）：data/config/code signature + working tree clean（freeze 时）+ effective data path 校验；正式产物隔离于 `outputs/runs/<freeze_id>/`，复用仅限签名一致。")
@@ -95,8 +109,15 @@ def build(out_root: Path) -> str:
     L.append("## 2. 为什么选择 1500 日窗口（等权聚合，审计修复）")
     L.append("")
     L.append("- 决策规则（预先声明）：每 (model, feature-set, tail) 单元内候选相对归一化损失等权平均；报告 per-cell winner、win count、drop-one sensitivity；聚合不一致时保守选长窗口。")
-    L.append("- 证据（outputs/development/window_decision.json）：24 个单元中 23 个偏好 1500（等权平均归一化损失 0.962 vs 1.038）；raw pinball sum 一致（无分歧）；drop-one sensitivity 24/24 仍选 1500。")
-    L.append("- 1% tail 校准：1500 窗口 |failure rate - 1%| 更小 —— 长窗口有效尾部样本更多（约 15 vs 10 个期望违例），经验分位数更稳定。")
+    L.append(
+        f"- 证据（outputs/development/window_decision.json）：{_cells} 个单元中 {_win_cells} 个偏好 {_chosen}"
+        f"（等权平均归一化损失 {_norm_chosen:.3f} vs {_norm_other:.3f}）；raw pinball sum 一致（无分歧）；"
+        f"drop-one sensitivity {_sens}/{_cells} 仍选 {_chosen}。"
+    )
+    L.append(
+        f"- 1% tail 校准：{_chosen} 窗口 |failure rate - 1%| 更小 —— 长窗口有效尾部样本更多"
+        f"（约 {int(int(_chosen) * 0.01)} vs {int(int(_other) * 0.01)} 个期望违例），经验分位数更稳定。"
+    )
     L.append("")
     L.append("## 3. 模型含义（数学/经济学）")
     L.append("")
@@ -275,7 +296,7 @@ def build(out_root: Path) -> str:
     L.append("| H1 HS regime adaptation lag | strongly supported | 2008-2009 违例率远超目标、平静期（2013-14/2017）违例率极低 —— 双向滞后（slow two-sided regime adaptation） |")
     L.append("| H2 GARCH 型波动率模型改善 VaR | supported, calibration mixed | proper loss 三 tail 最低；但覆盖并非全面通过（1% UC 拒绝、5% CC 拒绝） |")
     L.append("| H3a RV 增量 | supported（tail 依赖） | F0→F1：LinQR 5%/10% 改善、MLP 1%/5% 改善（见 §7 动态数字） |")
-    L.append("| H3b BV 条件增量 | model-dependent | LinQR ≈0 或略负；MLP 各 tail 均有改善（1% 最明显，-10.9%）—— 无 model-agnostic 一致增量 |")
+    L.append(f"| H3b BV 条件增量 | model-dependent | LinQR ≈0 或略负；MLP 各 tail 均有改善（1% 最明显，{d_m3_bv[0.01]:+.1f}%）—— 无 model-agnostic 一致增量 |")
     L.append("| H4 MLP 绝对增量 | unsupported | 三 tail pinball 均不优于 GARCH 族；仅 10% Holm 显著更差（p=" + f"{h_m3_10:.3f}" + "） |")
     L.append("| H5 非线性映射价值 | unsupported / inconclusive | 10% tail 显著更差（Holm p=" + f"{h_m3_10:.4f}" + "）；1%/5% 无清晰优势；joint loss+non-crossing 使其非纯 mapping control |")
     L.append("| H6 tail 依赖的相对表现 | supported | 校准与 DM 差异随 tail 明显变化（GJR 5/10% 显著、1% 方向性） |")
@@ -283,7 +304,7 @@ def build(out_root: Path) -> str:
     L.append("")
     L.append("## 13. 哪些结论可靠，哪些只是描述性")
     L.append("")
-    L.append("**可靠**（检验功效充分）：GARCH 族 sharpness 优势（三 tail pinball 最低）；GJR vs GARCH-t 的 leverage 增量（Holm 校正显著）；HS 违例聚集（Ind p<0.001）；"
+    L.append("**可靠**（检验功效充分）：GARCH 族分位数预测损失优势（三 tail proper quantile loss 最低）；GJR vs GARCH-t 的 leverage 增量（Holm 校正显著）；HS 违例聚集（Ind p<0.001）；"
     f"MLP 10% tail 显著劣于 GARCH-t/LinQR（Holm p={h_m3_10:.3f}，1%/5% 非显著属证据不足而非等价）；危机期 HS 滞后。")
     L.append("")
     L.append("**描述性/有限样本**：1% tail 各检验功效低（期望违例 ~26 个）；5% tail MLP vs GARCH-t 不显著属于证据不足而非等价；bootstrap 与 DM 不一致处；F3 整块效果的成分归因。")
@@ -296,7 +317,7 @@ def build(out_root: Path) -> str:
         f"（std {gr5_1['failure_rate_std']:.4f}）。"
     )
     L.append("- **NN 训练协议局限**：early stopping 用窗口最后 10% 做验证集，最佳 epoch 确定后未在完整窗口 refit —— NN 实际梯度训练仅用约 90% 的窗口（W=1500 时约 1350 天），且被排除的恰是最新约 150 天；GARCH/分位数回归用全窗口。本轮按研究纪律未改（final 已看过，改训练协议有 test-driven 嫌疑），列为明确 limitation。")
-    L.append("- **Neural 搜索功效有限**：搜索仅 101 个 rolling origins（2006-2007 每 5 日取 1），selection criterion 为三 tail pinball 未归一化平均（10% 尺度天然更大 → 权重更高）；grid 预先声明未扩大。")
+    L.append("- **Neural 搜索功效有限**：搜索使用 2006-2007 每 5 个交易日取 1 的稀疏验证原点，selection criterion 为三 tail pinball 未归一化平均（10% 尺度天然更大 → 权重更高）；grid 预先声明未扩大。")
     L.append("- DM vs bootstrap 在极端 tail 结论不一致处只能如实呈现。")
     L.append("")
     L.append("## 15. 面试时最值得解释的五个问题")

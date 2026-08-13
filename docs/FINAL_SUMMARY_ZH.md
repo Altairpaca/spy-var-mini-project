@@ -4,6 +4,8 @@
 
 ## 0. 本轮审计发现了什么（为什么旧 final 全部失效）
 
+> 本节为历史审计记录（旧实现修复前的事实），数字引用自 `docs/AUDIT_REMEDIATION.md`，非当前实验结果。
+
 完整记录见 `docs/AUDIT_REMEDIATION.md`。三个 correctness 问题：
 
 1. **Student-t VaR 尺度 bug（P0）**：旧实现直接用 `scipy.stats.t.ppf(alpha, nu)`，而 arch 的 Student-t innovation 是方差 1 的标准化分布。
@@ -141,7 +143,7 @@
 | H1 HS regime adaptation lag | strongly supported | 2008-2009 违例率远超目标、平静期（2013-14/2017）违例率极低 —— 双向滞后（slow two-sided regime adaptation） |
 | H2 GARCH 型波动率模型改善 VaR | supported, calibration mixed | proper loss 三 tail 最低；但覆盖并非全面通过（1% UC 拒绝、5% CC 拒绝） |
 | H3a RV 增量 | supported（tail 依赖） | F0→F1：LinQR 5%/10% 改善、MLP 1%/5% 改善（见 §7 动态数字） |
-| H3b BV 条件增量 | model-dependent | LinQR ≈0 或略负；MLP 各 tail 均有改善（1% 最明显，-10.9%）—— 无 model-agnostic 一致增量 |
+| H3b BV 条件增量 | model-dependent | LinQR ≈0 或略负；MLP 各 tail 均有改善（1% 最明显，+10.9%）—— 无 model-agnostic 一致增量 |
 | H4 MLP 绝对增量 | unsupported | 三 tail pinball 均不优于 GARCH 族；仅 10% Holm 显著更差（p=0.023） |
 | H5 非线性映射价值 | unsupported / inconclusive | 10% tail 显著更差（Holm p=0.0227）；1%/5% 无清晰优势；joint loss+non-crossing 使其非纯 mapping control |
 | H6 tail 依赖的相对表现 | supported | 校准与 DM 差异随 tail 明显变化（GJR 5/10% 显著、1% 方向性） |
@@ -149,7 +151,7 @@
 
 ## 13. 哪些结论可靠，哪些只是描述性
 
-**可靠**（检验功效充分）：GARCH 族 sharpness 优势（三 tail pinball 最低）；GJR vs GARCH-t 的 leverage 增量（Holm 校正显著）；HS 违例聚集（Ind p<0.001）；MLP 10% tail 显著劣于 GARCH-t/LinQR（Holm p=0.023，1%/5% 非显著属证据不足而非等价）；危机期 HS 滞后。
+**可靠**（检验功效充分）：GARCH 族分位数预测损失优势（三 tail proper quantile loss 最低）；GJR vs GARCH-t 的 leverage 增量（Holm 校正显著）；HS 违例聚集（Ind p<0.001）；MLP 10% tail 显著劣于 GARCH-t/LinQR（Holm p=0.023，1%/5% 非显著属证据不足而非等价）；危机期 HS 滞后。
 
 **描述性/有限样本**：1% tail 各检验功效低（期望违例 ~26 个）；5% tail MLP vs GARCH-t 不显著属于证据不足而非等价；bootstrap 与 DM 不一致处；F3 整块效果的成分归因。
 
@@ -158,7 +160,7 @@
 - 1% tail 期望违例少，覆盖检验功效低；单一资产（SPY ETF）；2018 数据仅至 6 月；rv5/bv 为日度聚合。
 - NN 计算成本约为经典模型 10 倍且无绝对增量；GRU 1% tail seed sensitivity（std 0.0034）。
 - **NN 训练协议局限**：early stopping 用窗口最后 10% 做验证集，最佳 epoch 确定后未在完整窗口 refit —— NN 实际梯度训练仅用约 90% 的窗口（W=1500 时约 1350 天），且被排除的恰是最新约 150 天；GARCH/分位数回归用全窗口。本轮按研究纪律未改（final 已看过，改训练协议有 test-driven 嫌疑），列为明确 limitation。
-- **Neural 搜索功效有限**：搜索仅 101 个 rolling origins（2006-2007 每 5 日取 1），selection criterion 为三 tail pinball 未归一化平均（10% 尺度天然更大 → 权重更高）；grid 预先声明未扩大。
+- **Neural 搜索功效有限**：搜索使用 2006-2007 每 5 个交易日取 1 的稀疏验证原点，selection criterion 为三 tail pinball 未归一化平均（10% 尺度天然更大 → 权重更高）；grid 预先声明未扩大。
 - DM vs bootstrap 在极端 tail 结论不一致处只能如实呈现。
 
 ## 15. 面试时最值得解释的五个问题
