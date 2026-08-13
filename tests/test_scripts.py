@@ -37,8 +37,9 @@ def smoke_env(tmp_path):
 def _run(script: str, cfg: str, data: str, out: str) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(ROOT / "scripts" / script),
-         "--config", cfg, "--data", data, "--out-root", out,
-         "--docs-dir", str(Path(out).parent / "docs")],
+         "--config", cfg, "--out-root", out,
+         "--docs-dir", str(Path(out).parent / "docs"),
+         "--allow-dirty"],
         capture_output=True, text=True, cwd=ROOT, timeout=600, check=False,
     )
 
@@ -61,7 +62,9 @@ def test_run_final_allowed_after_freeze(smoke_env):
     assert len(m["data_sha256"]) == 64
     r = _run("run_final.py", cfg, data, out)
     assert r.returncode == 0, r.stderr
-    panels = list((Path(out) / "predictions").glob("final-*.parquet"))
+    current = json.loads((Path(out) / "manifests" / "current_run.json").read_text())
+    run_dir = Path(current["run_dir"])
+    panels = list((run_dir / "predictions").glob("final-*.parquet"))
     assert len(panels) == 2  # M0, M1
 
 

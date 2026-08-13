@@ -1,24 +1,56 @@
-"""最终测试冻结机制。
+"""Final-test freeze mechanism (audit-hardened, 2026-08-13).
 
-final test 只允许在 FREEZE_MANIFEST 就绪后运行：
-- data 文件 SHA256 与冻结值一致；
-- config 内容哈希与冻结值一致；
-- primary window 已选定；
-- 冻结 commit 已存在（manifest 记录 git commit）。
+final test may run only after the freeze manifest is ready and valid:
+- data file SHA256 matches the frozen value (checked on the *effective* data path);
+- config content hash matches the frozen value;
+- primary window selected;
+- code/evaluator signature (hash of src/ + scripts/ + tests/) matches;
+- git working tree is clean at freeze time.
 
-任何检查不通过 -> check_freeze_ready 返回 (False, 原因)，
-run_final.py 以非零退出码拒绝运行。
+Any failed check -> check_freeze_ready returns (False, reason) and
+run_final.py refuses to run (non-zero exit).
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
+import subprocess
 import time
 from pathlib import Path
 
 from .config import Config, content_sha256
 from .data.loader import sha256_file
 from .io import git_commit_sha
+
+CODE_ROOTS = ("src", "scripts", "tests")
+
+
+def code_signature() -> str:
+    """SHA256 over all python sources (evaluator/code signature)."""
+    h = hashlib.sha256()
+    for root in CODE_ROOTS:
+        base = Path(root)
+        if not base.exists():
+            continue
+        for p in sorted(base.rglob("*.py")):
+            h.update(str(p).encode())
+            h.update(p.read_bytes())
+    return h.hexdigest()
+
+
+def working_tree_clean() -> tuple[bool, str]:
+    """True iff `git status --porcelain` is empty (ignoring .omo state)."""
+    try:
+        out = subprocess.run(
+            ["git", "status", "--porcelain"], capture_output=True, text=True, check=True, timeout=30
+        )
+    except Exception as e:  # noqa: BLE001
+        return False, f"cannot run git status: {e}"
+    lines = [l for l in out.stdout.splitlines() if not l.startswith("?? .omo/")]
+    if lines:
+        return False, f"working tree not clean: {lines[:3]}"
+    return True, "clean"
 
 
 def write_freeze_manifest(
@@ -32,8 +64,12 @@ def write_freeze_manifest(
     evaluation_metrics: list[str],
     final_test_start: str,
     output_path: str | Path,
+    allow_dirty: bool = False,
 ) -> dict:
-    """写入 docs/FREEZE_MANIFEST.md 与 outputs/manifests/freeze.json。"""
+    """Write docs/FREEZE_MANIFEST.md and freeze.json (one canonical source)."""
+    clean, clean_reason = working_tree_clean()
+    if not clean and not allow_dirty:
+        raise RuntimeError(f"freeze refused: {clean_reason}")
     manifest = {
         "freeze_created_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "git_commit": git_commit_sha(),
@@ -41,6 +77,7 @@ def write_freeze_manifest(
         "config_sha256": config.sha256,
         "data_path": config.data_path,
         "data_sha256": data_sha256,
+        "code_signature": code_signature(),
         "models": model_list,
         "feature_sets": feature_sets,
         "primary_window": primary_window,
@@ -65,26 +102,41 @@ def write_freeze_manifest(
     return manifest
 
 
-def check_freeze_ready(config: Config, freeze_dir: str | Path) -> tuple[bool, str]:
-    """检查冻结状态；返回 (是否就绪, 原因)。"""
+def check_freeze_ready(
+    config: Config,
+    freeze_dir: str | Path,
+    effective_data_path: str | None = None,
+    require_clean_tree: bool = True,
+) -> tuple[bool, str]:
+    """Check freeze validity; return (ready, reason).
+
+    effective_data_path: the data file the runner will actually use
+    (audit-hardened: prevents freezing data A but running data B).
+    """
     fd = Path(freeze_dir)
     jp = fd / "freeze.json"
     if not jp.exists():
-        return False, "freeze.json 不存在：final test 尚未冻结"
+        return False, "freeze.json missing: final test not frozen"
     try:
         manifest = json.loads(jp.read_text(encoding="utf-8"))
     except json.JSONDecodeError as e:
-        return False, f"freeze.json 损坏: {e}"
+        return False, f"freeze.json corrupted: {e}"
     if manifest.get("config_sha256") != config.sha256:
-        return False, "config 哈希与冻结值不一致（配置在冻结后被修改）"
+        return False, "config hash mismatch (config changed after freeze)"
     if config.primary_window is None:
-        return False, "primary window 未选择"
-    if not Path(config.data_path).exists():
-        return False, f"数据文件缺失: {config.data_path}"
-    current_data_sha = sha256_file(config.data_path)
-    if manifest.get("data_sha256") != current_data_sha:
-        return False, "数据文件 SHA256 与冻结值不一致"
-    return True, "freeze 就绪"
+        return False, "primary window not selected"
+    data_path = Path(effective_data_path or config.data_path)
+    if not data_path.exists():
+        return False, f"data file missing: {data_path}"
+    if manifest.get("data_sha256") != sha256_file(data_path):
+        return False, "data file SHA256 mismatch with frozen value"
+    if manifest.get("code_signature") != code_signature():
+        return False, "code signature mismatch (src/scripts/tests changed after freeze)"
+    if require_clean_tree:
+        ok, reason = working_tree_clean()
+        if not ok:
+            return False, reason
+    return True, "freeze ready"
 
 
 def check_freeze_config_integrity(config: Config, freeze_dir: str | Path) -> bool:

@@ -46,7 +46,7 @@ def cfg(tmp_path):
 def test_gate_blocks_without_freeze(cfg, tmp_path):
     ok, reason = check_freeze_ready(cfg, tmp_path / "manifests")
     assert not ok
-    assert "尚未冻结" in reason
+    assert "not frozen" in reason
 
 
 def test_gate_blocks_on_config_change(cfg, tmp_path):
@@ -64,16 +64,17 @@ def test_gate_blocks_on_config_change(cfg, tmp_path):
         evaluation_metrics=["kupiec"],
         final_test_start="2008-01-01",
         output_path=md,
+        allow_dirty=True,
     )
-    ok, reason = check_freeze_ready(cfg, md)
+    ok, reason = check_freeze_ready(cfg, md, require_clean_tree=False)
     assert ok, reason
     # 修改配置内容（模拟冻结后改配置）=> 拒绝
     p = Path(cfg.config_path)
     p.write_text(p.read_text().replace("primary: 1000", "primary: 1500"), encoding="utf-8")
     cfg2 = load_config(str(p))
-    ok2, reason2 = check_freeze_ready(cfg2, md)
+    ok2, reason2 = check_freeze_ready(cfg2, md, require_clean_tree=False)
     assert not ok2
-    assert "config 哈希" in reason2
+    assert "config hash" in reason2
 
 
 def test_gate_blocks_on_data_change(cfg, tmp_path):
@@ -91,13 +92,14 @@ def test_gate_blocks_on_data_change(cfg, tmp_path):
         evaluation_metrics=["kupiec"],
         final_test_start="2008-01-01",
         output_path=md,
+        allow_dirty=True,
     )
     df = pd.read_csv(cfg.data_path)
     df.loc[0, "log_ret"] += 1e-6
     df.to_csv(cfg.data_path, index=False)
-    ok, reason = check_freeze_ready(cfg, md)
+    ok, reason = check_freeze_ready(cfg, md, require_clean_tree=False)
     assert not ok
-    assert "数据文件 SHA256" in reason
+    assert "data file SHA256" in reason
 
 
 def test_gate_blocks_without_primary_window(cfg, tmp_path):
@@ -115,6 +117,7 @@ def test_gate_blocks_without_primary_window(cfg, tmp_path):
         evaluation_metrics=["kupiec"],
         final_test_start="2008-01-01",
         output_path=md,
+        allow_dirty=True,
     )
     p = Path(cfg.config_path)
     p.write_text(p.read_text().replace("primary: 1000", "primary: null"), encoding="utf-8")
@@ -124,7 +127,7 @@ def test_gate_blocks_without_primary_window(cfg, tmp_path):
     m = json.loads(manifest.read_text(encoding="utf-8"))
     m["config_sha256"] = cfg2.sha256
     manifest.write_text(json.dumps(m, ensure_ascii=False, indent=2), encoding="utf-8")
-    ok, reason = check_freeze_ready(cfg2, md)
+    ok, reason = check_freeze_ready(cfg2, md, require_clean_tree=False)
     assert not ok
     assert "primary window" in reason
 
@@ -144,7 +147,8 @@ def test_gate_passes_when_frozen(cfg, tmp_path):
         evaluation_metrics=["kupiec"],
         final_test_start="2008-01-01",
         output_path=md,
+        allow_dirty=True,
     )
-    ok, reason = check_freeze_ready(cfg, md)
+    ok, reason = check_freeze_ready(cfg, md, require_clean_tree=False)
     assert ok
-    assert reason == "freeze 就绪"
+    assert reason == "freeze ready"

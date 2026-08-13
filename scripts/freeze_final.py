@@ -22,6 +22,7 @@ from spyvar.freeze import write_freeze_manifest
 def main() -> None:
     args = parse_common_args("final-test 冻结")
     docs_dir = getattr(args, "docs_dir", None)
+    allow_dirty = getattr(args, "allow_dirty", False)
     cfg = resolve_config(args)
     if docs_dir is None:
         # 未显式指定时使用仓库 docs/（正式冻结）；测试传入临时目录避免污染
@@ -39,6 +40,12 @@ def main() -> None:
         "dq_test", "mean_pinball", "crossing_rate", "violation_runs",
         "dm_test", "block_bootstrap",
     ]
+    if not allow_dirty:
+        from spyvar.freeze import working_tree_clean
+
+        ok, reason = working_tree_clean()
+        if not ok:
+            sys.exit(f"冻结拒绝: {reason}")
     manifest = write_freeze_manifest(
         cfg,
         data_sha256=data_sha,
@@ -49,6 +56,7 @@ def main() -> None:
         evaluation_metrics=metrics,
         final_test_start=cfg.final_test_start,
         output_path=Path(docs_dir),
+        allow_dirty=allow_dirty,
     )
     # 机器可读副本（gate 检查用）
     import json
