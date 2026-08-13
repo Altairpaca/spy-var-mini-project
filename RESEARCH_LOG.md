@@ -48,9 +48,9 @@
 ### 首次 final test 前的冻结清单（对应任务 §13）
 - [x] 统一引擎与 schema
 - [x] 全部自动测试（leakage/alignment/rolling/gate/统计检验）
-- [ ] development 实验（窗口对比、NN 搜索）—— 数据到达后
-- [ ] 窗口/特征/超参选择记录（本文件追加）
-- [ ] configs/final.yaml 定稿 + freeze_final.py + 冻结 commit
+- [x] development 实验（窗口对比、NN 搜索）—— 2026-08-13 correction rerun 完成
+- [x] 窗口/特征/超参选择记录（本文件追加）
+- [x] configs/final.yaml 定稿 + freeze_final.py + 冻结 commit（7a6359d）
 
 ### 2026-08-13 — 审计修复决策记录（final test 之前）
 - Student-t VaR 尺度 bug：arch innovation 为方差 1 标准化 t；分位数用 StudentsT().ppf
@@ -65,6 +65,37 @@
 - DQ 保留为 auxiliary diagnostic（已有 power/size 测试）。
 - 冻结门禁：data/config/code signature + working tree clean + effective data path。
 - 正式 final 输出隔离到 outputs/runs/<freeze_id>/；artifact 复用仅限签名一致。
+
+### 2026-08-13 — Correction-pass execution and frozen rerun (post-audit chronology)
+
+Chronology of the correction pass (details in `docs/CORRECTION_PASS.md` and
+`docs/AUDIT_REMEDIATION.md`):
+
+1. Development rerun on `correction/final-pass` (16 panels x 498 origins, 0 failures).
+2. Window re-selection: 23/24 cells prefer W=1500 (drop-one sensitivity 24/24);
+   no disagreement with the earlier decision.
+3. Neural search re-executed on the SELECTED window W=1500 with the same
+   predeclared grid (M3 16 configs, M5 8 configs). The search is window-sensitive:
+   it selected M3 hidden [16] lr 1e-3 wd 1e-4 and M5 hidden 16 lr 1e-3 wd 0
+   (differing from the earlier W=1000 search decisions [32]/32, which were discarded).
+4. `update_final_config.py --config configs/final.yaml` wrote the new decisions into
+   the final config; freeze v2 committed as 7a6359d (config SHA 058d5aea,
+   data SHA 277406a8).
+5. Frozen final clean rerun: canonical run `outputs/runs/e34928235ed6-058d5aea/`
+   (12 panels x 2641 target dates 2008-01-02..2018-06-27, 0 fit failures) plus seed
+   robustness M3/M5 x {7, 2026} (n_seeds=3).
+6. Unified evaluation, figures, PDF report and Chinese summary regenerated from the
+   canonical run; page-by-page render QA passed (13 pages, no overflow, no
+   textbf/arrow/placeholder artifacts).
+7. Merged to main via PR #3 (merge commit c475dfd); annotated tag
+   `phd-miniproject-audited-final-2`; clean-clone reproduction verified
+   (uv sync --frozen + 81 tests + report rebuild, no retraining).
+
+Post-final documentation QA (this round): README three-phase reproduction commands
+corrected (development -> update final config -> freeze -> final OOS);
+`FINAL_SUMMARY_ZH.md` fully dynamic (no hard-coded hyperparameters, SHAs or
+p-values); `neural_search.py` fails closed without `window_decision.json`;
+ablation narrative written per model x tail; EXPERIMENT_SPEC checklist completed.
 ### 2026-08-12 — 仓库初始状态
 - main 分支两个初始 commit；README/AGENTS/EXPERIMENT_SPEC/ENVIRONMENT/RESULTS_SCHEMA/RESEARCH_LOG 等 bootstrap 文档齐全。
 - 本日志初始段由 bootstrap 写入（2026-08-11 条目为模板遗留，保留作为历史）。

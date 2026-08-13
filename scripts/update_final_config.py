@@ -1,9 +1,10 @@
-"""将 development 证据决策写入 final 配置（脚本化，防手改）。
+"""Write the development evidence decisions into the final config (scripted, no hand edits).
 
-读取 outputs/tables/window_decision.json（窗口）与
-neural_search_decision.json（M3/M5 超参），更新配置的
-window.primary 与 models.M3/M5 对应字段；随后 freeze_final.py
-生成冻结清单。任何选择都有 development 证据文件可追溯。
+Reads outputs/development/window_decision.json (window) and
+outputs/development/neural_search_decision.json (M3/M5 hyperparameters), updates
+window.primary and the models.M3/M5 fields of the target config; freeze_final.py
+then generates the freeze manifest. Every choice is traceable to a development
+evidence file.
 """
 
 from __future__ import annotations

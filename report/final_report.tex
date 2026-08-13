@@ -184,7 +184,7 @@ stress\_2015\_2016 & 0.0595 & 0.0675 & 0.0476 & 0.0357 & 0.0496 & 0.0655\\
 \end{table}
 
 \section{Robustness}
-Seed robustness for the neural models (predeclared seeds 7, 42, 2026; headline series is the primary seed 42, not an ensemble): \texttt{outputs/tables/seed\_robustness\_summary.csv}. DM and block-bootstrap pairwise comparisons: Table~\ref{tab:dm}.
+Seed robustness for the neural models (predeclared seeds 7, 42, 2026; headline series is the primary seed 42, not an ensemble): the canonical run tables (\texttt{../outputs/runs/e34928235ed6-058d5aea/tables/seed\_robustness\_summary.csv}). DM and block-bootstrap pairwise comparisons: Table~\ref{tab:dm}.
 
 \begin{table}[ht]
 \centering
@@ -227,7 +227,7 @@ The GARCH family (GARCH-t, GJR-t) achieves the lowest mean pinball loss at all t
 
 The neural models do not deliver consistent absolute out-of-sample improvements over the classical baselines: the MLP versus GARCH-t is not significant at the 1\% tail (Holm-corrected DM p=0.0790) and significant at the 10\% tail (Holm p=0.0227), while the 5\% difference is not statistically decisive (Holm p=1.0000); versus the linear quantile model it is significant at the 10\% tail (Holm p=0.0227). The GRU is strongly under-conservative at the 1\% tail (failure rate 0.0363, far above the 1\% nominal), with the largest across-seed dispersion of the neural models. Under the pre-specified architecture family and development-only tuning, this is a valid negative result for this information set and sample; it should not be generalized to all neural VaR architectures.
 
-Feature ablations at the 5\% tail (LinQR: RV $\rightarrow$ 4.4\%, BV$|$RV 0.1\%, F3 block -1.0\%, MLP: RV $\rightarrow$ 2.0\%, BV$|$RV 2.8\%, F3 block -0.7\%): realized volatility is the only clearly useful incremental realized-measure block; bipower variation contributes little once RV is observed; the F3 jump/downside block does not provide stable out-of-sample gains. The F3 effect is attributed to the block as a whole, not to any single component.
+Feature ablations isolate the incremental value of each realized-measure block by model and tail (relative pinball change; positive = improvement). Adding RV (F0 $\rightarrow$ F1): LinQR 1\%: +0.1\%, 5\%: +4.4\%, 10\%: +4.8\% - improvements at the 5\%, 10\% tails; MLP 1\%: +8.2\%, 5\%: +2.0\%, 10\%: -0.6\% - improvements at the 1\%, 5\% tails. Adding BV conditional on RV (F1 $\rightarrow$ F2): LinQR 1\%: -1.3\%, 5\%: +0.1\%, 10\%: -0.5\% - essentially no incremental gain to linear quantile regression once RV is observed; MLP 1\%: +10.9\%, 5\%: +2.8\%, 10\%: +1.5\% - the MLP appears able to exploit BV information, particularly at the 1\% tail (+10.9\%). This additional information value is nevertheless insufficient to make the MLP outperform GARCH/GJR in absolute forecast loss (information increment $\neq$ model-level superiority). The F3 jump/downside block (F2 $\rightarrow$ F3): LinQR 1\%: -14.7\%, 5\%: -1.0\%, 10\%: -0.4\%; MLP 1\%: -3.9\%, 5\%: -0.7\%, 10\%: -0.1\% - no stable positive contribution at any model-tail cell; the F3 effect is attributed to the block as a whole, not to any single component.
 
 \section{References}
 \begin{itemize}
