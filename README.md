@@ -22,15 +22,46 @@ uv sync                 # python 3.11 + 全部依赖（含 CPU torch）
 要求：Python 3.11、约 4 GB 内存、CPU 即可（NN 模型极小）；GPU 可选。
 BLAS 线程限制已在脚本内自动设置（OMP/MKL/OPENBLAS=1）。
 
-## 复现
+## 复现（三阶段研究协议）
+
+研究生命周期明确分为三个带 Git 边界的阶段；freeze 是 development 与
+frozen OOS 之间的强制边界，不压缩为单一命令。
+
+### Phase 1 — Development（可重复执行）
 
 ```bash
-# 全量（数据审计 -> development -> NN 搜索 -> 窗口选择 -> 冻结 -> final test
-#   -> seed 稳健性 -> 统一评估 -> 图表 -> PDF 报告）
-python scripts/run_all.py --config configs/final.yaml
+python scripts/run_all.py --config configs/development.yaml --stages audit,dev,select,search,update
+```
 
-# 报告再生（不重训模型，从 outputs 产物直接生成）
+产出（`outputs/development/`）：数据审计、dev 面板、窗口选择
+（`window_decision.json`）、NN 搜索（`neural_search.csv` +
+`neural_search_decision.json`，在选定窗口上执行）、更新后的
+`configs/final.yaml`。**提交这些 development 决策**后再进入冻结。
+
+### Phase 2 — Freeze（一次性，Git 边界）
+
+```bash
+python scripts/freeze_final.py --config configs/final.yaml   # 校验 data/config/code 签名 + clean tree
+git add configs/final.yaml docs/FREEZE_MANIFEST.md docs/freeze.json
+git commit   # 冻结 commit（保留 SHA）
+```
+
+冻结后任何代码/配置改动都会使 gate 拒绝，直到重新冻结。
+
+### Phase 3 — Frozen OOS（冻结后仅运行一次）
+
+```bash
+python scripts/run_all.py --config configs/final.yaml --stages final,robust,eval,figures,report
+```
+
+（或逐脚本：`run_final.py --clean-run` → `seed_robustness.py` →
+`evaluate.py` → `make_figures.py` → `make_report.py`。）
+
+### Report-only regeneration（不重训）
+
+```bash
 python scripts/make_report.py --config configs/final.yaml
+python scripts/generate_final_summary.py
 ```
 
 自动测试：
