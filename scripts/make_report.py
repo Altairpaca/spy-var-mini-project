@@ -1,3 +1,4 @@
+# ruff: noqa: UP031  # percent-format used deliberately (LaTeX escaping)
 """英文 PDF 报告生成（19 节结构）。
 
 全部数字从 outputs/tables 产物读取（禁止手录），图表从
@@ -68,24 +69,32 @@ def _ablation_latex(metrics: pd.DataFrame) -> str:
     return "\\begin{tabular}{llrr}\n\\textbf{Model} & \\textbf{Tail} & \\textbf{Rate} & \\textbf{Pinball}\\\\\n" + "".join(rows) + "\\end{tabular}"
 
 
-def _dm_latex(dm: pd.DataFrame) -> str:
+def _dm_latex(dm: pd.DataFrame, headline_only: bool = False) -> str:
+    """DM comparison table (LaTeX).
+
+    Correction pass: commands use single backslashes; the body table shows
+    only the predeclared headline pairs (12 rows), the full 45-row matrix is
+    rendered in the appendix (headline_only=False).
+    """
     BS = chr(92)
     NL = chr(10)
     has_holm = "holm_dm_pvalue" in dm.columns
+    sub = dm[dm["headline"] == 1] if headline_only and "headline" in dm.columns else dm
     rows = []
-    for _, r in dm.iterrows():
-        holm_cell = f" & {_fmt(r['holm_dm_pvalue'])}" if has_holm and not pd.isna(r.get("holm_dm_pvalue")) else ""
+    for _, r in sub.iterrows():
+        holm_cell = f" & {_fmt(r['holm_dm_pvalue'])}" if has_holm else ""
         head = "H" if int(r.get("headline", 0)) else ""
         rows.append(
             f"{r['model_a']} vs {r['model_b']} & {int(r['tail']*100)}\\% & {_fmt(r['dm_stat'])} & "
             f"{_fmt(r['dm_pvalue'])}{holm_cell} & {_fmt(r['bootstrap_pvalue'])} & {r['favors']} & {head}"
             + BS + BS + NL
         )
-    holm_header = " & " + BS + BS + "textbf{Holm p}" if has_holm else ""
-    header = (BS + BS + 'textbf{Pair} & ' + BS + BS + 'textbf{Tail} & ' + BS + BS + 'textbf{DM} & '
-             + BS + BS + 'textbf{DM p}' + holm_header + ' & ' + BS + BS + 'textbf{Boot p} & '
-             + BS + BS + 'textbf{Favors} & ' + BS + BS + 'textbf{Headline}' + BS + BS + NL)
+    holm_header = " & " + BS + "textbf{Holm p}" if has_holm else ""
+    header = (BS + 'textbf{Pair} & ' + BS + 'textbf{Tail} & ' + BS + 'textbf{DM} & '
+             + BS + 'textbf{DM p}' + holm_header + ' & ' + BS + 'textbf{Boot p} & '
+             + BS + 'textbf{Favors} & ' + BS + 'textbf{Headline}' + BS + BS + NL)
     return BS + "footnotesize" + BS + "begin{tabular}{llrrrrrl}" + NL + header + "".join(rows) + BS + "end{tabular}"
+
 def _regime_latex(regime: pd.DataFrame, primary: dict) -> str:
     m = regime.copy()
     m = m[m.apply(lambda r: primary.get(r["model"]) == r["feature_set"], axis=1)]
@@ -98,97 +107,125 @@ def _regime_latex(regime: pd.DataFrame, primary: dict) -> str:
         cells = " & ".join(f"{_fmt(v)}" for v in pivot.loc[reg])
         rows.append(reg.replace(chr(95), chr(92) + chr(95)) + " & " + cells + chr(92) + chr(92) + chr(10))
     return chr(92) + "begin{tabular}{l" + "r" * len(pivot.columns) + "}" + chr(10) + chr(92) + "textbf{Regime} & " + labels + chr(92) + chr(92) + chr(10) + "".join(rows) + chr(92) + "end{tabular}"
-def _conclusion_latex(metrics: pd.DataFrame, dm: pd.DataFrame, regime: pd.DataFrame) -> str:
-    """Data-driven conclusion: every number is read from frozen output tables.
+def _conclusion_latex(metrics, dm, regime):
+    """Data-driven conclusion; every number read from frozen tables.
 
-    Audit fix (2026-08-13): no hard-coded result sentences; unconditional
-    frequency accuracy is separated from conditional adequacy; DM claims use
-    the Holm-corrected headline p-values; ablation deltas are computed here.
+    Correction pass (2026-08-13): 1% sentences use the 1% tail rows; rates
+    above nominal are under-conservative; GARCH/GJR coverage is reported per
+    model; GJR claims use "consistent with"; ablation uses marginal deltas;
+    arrows use $\rightarrow$.
     """
     primary = {"M0": "none", "M1": "none", "M2": "F3", "M3": "F3", "M4": "none", "M5": "F3"}
     m = metrics[metrics.apply(lambda r: primary.get(r["model"]) == r["feature_set"], axis=1)]
     name = {"M0": "HS", "M1": "GARCH-t", "M2": "LinQR", "M3": "MLP", "M4": "GJR-t", "M5": "GRU"}
     lines = []
 
-    # 1) per tail: closest empirical failure rate (unconditional frequency) and lowest pinball
+    def cell(model, tail, col):
+        return float(m[(m["model"] == model) & (m["tail"] == tail)][col].iloc[0])
+
+    # per tail: closest empirical failure rate and lowest pinball
     for tail in (0.01, 0.05, 0.10):
         sub = m[m["tail"] == tail]
         closest = sub.loc[sub["failure_rate"].sub(tail).abs().idxmin()]
         sharpest = sub.loc[sub["mean_pinball"].idxmin()]
-        lines.append(
-            f"At the {int(tail*100)}\\% tail, the model with the empirical failure rate closest to the "
-            f"nominal level is {name[closest['model']]} ({closest['failure_rate']:.4f} vs target {tail:.2f}); "
-            f"the lowest mean pinball loss is achieved by {name[sharpest['model']]} ({sharpest['mean_pinball']:.5f}). "
-            "Closeness of the unconditional failure frequency is not, by itself, evidence of adequate conditional "
-            "VaR dynamics (see the coverage tests and the violation-clustering diagnostics below)."
-        )
+        s1 = ("At the %d\\%% tail, the model with the empirical failure rate closest to the "
+              "nominal level is %s (%.4f vs target %.2f); the lowest mean pinball loss is "
+              "achieved by %s (%.5f). Closeness of the unconditional failure frequency is not, "
+              "by itself, evidence of adequate conditional VaR dynamics (see the coverage tests "
+              "and the violation-clustering diagnostics below).")
+        lines.append(s1 % (int(tail * 100), name[closest["model"]], closest["failure_rate"],
+                           tail, name[sharpest["model"]], sharpest["mean_pinball"]))
 
-    # 2) GARCH-family claims computed from the tables
-    r1 = m[(m["model"] == "M1") & (m["tail"] == 0.05)].iloc[0]
-    r4 = m[(m["model"] == "M4") & (m["tail"] == 0.05)].iloc[0]
-    r0 = m[(m["model"] == "M0") & (m["tail"] == 0.05)].iloc[0]
-    cc10_m1 = m[(m["model"] == "M1") & (m["tail"] == 0.10)]["conditional_coverage_pvalue"].iloc[0]
-    cc10_m4 = m[(m["model"] == "M4") & (m["tail"] == 0.10)]["conditional_coverage_pvalue"].iloc[0]
+    fr_m1_1 = cell("M1", 0.01, "failure_rate")
+    fr_m4_1 = cell("M4", 0.01, "failure_rate")
+    fr_m1_5 = cell("M1", 0.05, "failure_rate")
+    fr_m0_5 = cell("M0", 0.05, "failure_rate")
+    kp_m1_1 = cell("M1", 0.01, "kupiec_pvalue")
+    kp_m4_1 = cell("M4", 0.01, "kupiec_pvalue")
+    cc1_m1 = cell("M1", 0.01, "conditional_coverage_pvalue")
+    cc1_m4 = cell("M4", 0.01, "conditional_coverage_pvalue")
+    cc5_m1 = cell("M1", 0.05, "conditional_coverage_pvalue")
+    cc5_m4 = cell("M4", 0.05, "conditional_coverage_pvalue")
+    cc10_m1 = cell("M1", 0.10, "conditional_coverage_pvalue")
+    cc10_m4 = cell("M4", 0.10, "conditional_coverage_pvalue")
+
     reg = regime[regime["tail"] == 0.05]
     reg = reg[reg.apply(lambda r: primary.get(r["model"]) == r["feature_set"], axis=1)]
     crisis = reg[reg["regime"] == "crisis_2008_2009"]
     if len(crisis):
         hs_crisis = float(crisis[crisis["model"] == "M0"]["failure_rate"].iloc[0])
         gt_crisis = float(crisis[crisis["model"] == "M1"]["failure_rate"].iloc[0])
-        crisis_sentence = (
-            rf"crisis-period 5\% failure rates are {hs_crisis:.4f} (HS) vs {gt_crisis:.4f} (GARCH-t), "
-            "documenting slow regime adaptation of historical simulation"
-        )
+        crisis_sentence = ("crisis-period 5\\%% failure rates are %.4f (HS) vs %.4f (GARCH-t), "
+                           "documenting slow two-sided regime adaptation of historical simulation") % (
+            hs_crisis, gt_crisis)
     else:
         crisis_sentence = "crisis-period stratification is not available in this run"
-    lines.append(
-        "The GARCH family (GARCH-t, GJR-t) achieves the lowest mean pinball loss (sharpness) at all three tails "
-        rf"and strong 1\% tail calibration (failure rates {r1['failure_rate']:.4f} / {r4['failure_rate']:.4f} vs "
-        rf"{r0['failure_rate']:.4f} for HS), with no evidence of violation clustering at the 1\% and 5\% tails. "
-        rf"Two caveats: at the 5\% and 10\% tails HS is marginally closer to the nominal frequency "
-        rf"(5\% tail {r0['failure_rate']:.4f} vs {r1['failure_rate']:.4f}), and the 10\% conditional-coverage test "
-        f"is rejected for the GARCH family (CC p {cc10_m1:.4f} / {cc10_m4:.4f}); {crisis_sentence}."
-    )
 
-    # 3) neural claims from Holm-corrected headline DM p-values
-    m1m3 = dm[(dm["model_a"] == "M1") & (dm["model_b"] == "M3") & (dm["tail"] == 0.05)]
-    m2m3 = dm[(dm["model_a"] == "M2") & (dm["model_b"] == "M3") & (dm["tail"] == 0.05)]
-    m5_1 = m[(m["model"] == "M5") & (m["tail"] == 0.01)].iloc[0]
-    if len(m1m3) and len(m2m3):
-        pcol = "holm_dm_pvalue" if "holm_dm_pvalue" in dm.columns else "dm_pvalue"
-        h1 = float(m1m3[pcol].iloc[0])
-        h2 = float(m2m3[pcol].iloc[0])
-        dm_sentence = (
-            rf"the Holm-corrected DM p-values at the 5\% tail are {h1:.4f} (GARCH-t vs MLP) and {h2:.4f} "
-            "(LinQR vs MLP)"
-        )
-    else:
-        dm_sentence = "headline DM comparisons are not available in this run"
-    lines.append(
-        "The neural models do not outperform the classical baselines on this frozen panel: "
-        + dm_sentence
-        + rf"; the GRU is strongly over-conservative at the 1\% tail (failure rate {m5_1['failure_rate']:.4f}). "
-        "Across-seed dispersion is reported in the robustness section rather than summarized qualitatively here. "
-        "This is a valid negative result on this information set and window."
-    )
+    garch_s = ("The GARCH family (GARCH-t, GJR-t) achieves the lowest mean pinball loss at all three "
+               "tails. At the 1\\%% tail, GJR-t has the closest failure rate among the primary models "
+               "(%.4f vs %.4f for GARCH-t; both lie above the 1\\%% nominal, i.e. mildly "
+               "under-conservative, and unconditional coverage rejects the nominal 1\\%% rate at the "
+               "5\\%% level for both: Kupiec p=%.4f / %.4f). Conditional coverage passes only for "
+               "GJR-t at the 1\\%% tail (CC p=%.4f), while GARCH-t does not (CC p=%.4f); at the 5\\%% "
+               "tail both fail conditional coverage (CC p=%.4f / %.4f). At the 10\\%% tail, GARCH-t "
+               "fails the conditional-coverage test at the 5\\%% level (CC p=%.4f) whereas GJR-t does "
+               "not (CC p=%.4f). At the 5\\%% tail HS is marginally closer to the nominal frequency "
+               "(%.4f vs %.4f). %s") % (
+        fr_m4_1, fr_m1_1, kp_m1_1, kp_m4_1, cc1_m4, cc1_m1, cc5_m1, cc5_m4,
+        cc10_m1, cc10_m4, fr_m0_5, fr_m1_5, crisis_sentence)
+    lines.append(garch_s)
 
-    # 4) ablation deltas computed from the metrics table (F0 vs F3 at the 5% tail)
+    def dmcell(a, b, tail, col):
+        sel = dm[(dm["model_a"] == a) & (dm["model_b"] == b) & (dm["tail"] == tail)]
+        if not len(sel):
+            return float("nan")
+        return float(sel[col].iloc[0])
+
+    pcol = "holm_dm_pvalue" if "holm_dm_pvalue" in dm.columns else "dm_pvalue"
+    h_m1m3_1 = dmcell("M1", "M3", 0.01, pcol)
+    h_m1m3_5 = dmcell("M1", "M3", 0.05, pcol)
+    h_m1m3_10 = dmcell("M1", "M3", 0.10, pcol)
+    h_m2m3_10 = dmcell("M2", "M3", 0.10, pcol)
+    fr_m5_1 = cell("M5", 0.01, "failure_rate")
+    def sig(pv):
+        return "significant" if pv < 0.05 else "not significant"
+    m1m3_1_w = sig(h_m1m3_1)
+    m1m3_10_w = sig(h_m1m3_10)
+    m1m3_5_w = "not statistically decisive" if h_m1m3_5 >= 0.05 else "significant"
+    m2m3_10_w = sig(h_m2m3_10)
+    neural_s = ("The neural models do not deliver consistent absolute out-of-sample improvements over "
+                "the classical baselines: the MLP versus GARCH-t is %s at the 1\\%% tail (Holm-corrected "
+                "DM p=%.4f) and %s at the 10\\%% tail (Holm p=%.4f), while the 5\\%% difference is %s "
+                "(Holm p=%.4f); versus the linear quantile model it is %s at the 10\\%% tail (Holm "
+                "p=%.4f). The GRU is strongly under-conservative at the 1\\%% tail (failure rate %.4f, "
+                "far above the 1\\%% nominal), with the largest across-seed dispersion of the neural "
+                "models. Under the pre-specified architecture family and development-only tuning, this "
+                "is a valid negative result for this information set and sample; it should not be "
+                "generalized to all neural VaR architectures.") % (
+        m1m3_1_w, h_m1m3_1, m1m3_10_w, h_m1m3_10, m1m3_5_w, h_m1m3_5, m2m3_10_w, h_m2m3_10, fr_m5_1)
+    lines.append(neural_s)
+
+    # ablation: marginal deltas at the 5% tail
     abl5 = metrics[metrics["tail"] == 0.05]
     deltas = []
     for model in ("M2", "M3"):
         sub = abl5[abl5["model"] == model].sort_values("feature_set")
-        if len(sub) >= 2:
+        if len(sub) >= 4:
             f0 = float(sub.iloc[0]["mean_pinball"])
-            f3 = float(sub.iloc[-1]["mean_pinball"])
-            deltas.append(rf"{name[model]}: {100*(f0-f3)/f0:.1f}\%")
+            f1 = float(sub.iloc[1]["mean_pinball"])
+            f2 = float(sub.iloc[2]["mean_pinball"])
+            f3 = float(sub.iloc[3]["mean_pinball"])
+            d_rv = 100.0 * (f0 - f1) / f0
+            d_bv = 100.0 * (f1 - f2) / f1
+            d_f3 = 100.0 * (f2 - f3) / f2
+            deltas.append("%s: RV $\\rightarrow$ %.1f\\%%, BV$|$RV %.1f\\%%, F3 block %.1f\\%%" % (
+                name[model], d_rv, d_bv, d_f3))
     delta_text = ", ".join(deltas) if deltas else "not available"
-    lines.append(
-        r"Feature ablations (F0 returns -> F3 full block) change mean pinball at the 5\% tail by "
-        + delta_text
-        + "; the realized-measure block adds information for the linear model and the MLP, "
-        "but it does not change the model ranking. The F3 effect is attributed to the "
-        "jump/downside feature block as a whole, not to any single component."
-    )
+    lines.append("Feature ablations at the 5\\% tail (" + delta_text
+                 + "): realized volatility is the only clearly useful incremental realized-measure "
+                 "block; bipower variation contributes little once RV is observed; the F3 jump/downside "
+                 "block does not provide stable out-of-sample gains. The F3 effect is attributed to the "
+                 "block as a whole, not to any single component.")
     return "\n\n".join(lines)
 
 def forecast_count(out_root: Path) -> int:
@@ -336,12 +373,12 @@ Figure~\ref{fig:regime} and Table~\ref{tab:regime} stratify frozen results into 
 \end{table}
 
 \section{Robustness}
-Seed robustness for the neural models (predeclared seeds 7, 42, 2026; headline series is the primary seed 42, not an ensemble): \texttt{outputs/tables/seed\_robustness.csv}. DM and block-bootstrap pairwise comparisons: Table~\ref{tab:dm}.
+Seed robustness for the neural models (predeclared seeds 7, 42, 2026; headline series is the primary seed 42, not an ensemble): \texttt{outputs/tables/seed\_robustness\_summary.csv}. DM and block-bootstrap pairwise comparisons: Table~\ref{tab:dm}.
 
 \begin{table}[ht]
 \centering
 \caption{Pairwise loss comparisons (negative DM favors model\_a).}\label{tab:dm}
-""" + _dm_latex(dm) + r"""
+""" + _dm_latex(dm, headline_only=True) + r"""
 \end{table}
 
 \section{Limitations}
@@ -376,11 +413,19 @@ The conclusion is drawn from the frozen out-of-sample evidence in Section~\ref{s
 \end{itemize}
 
 \appendix
+\section{Full Pairwise DM Matrix}\label{sec:dmappendix}
+The complete 45-row pairwise Diebold--Mariano comparison matrix (exploratory; the body table shows only the predeclared headline pairs with Holm correction).
+\begin{table}[ht]
+\centering
+\caption{Full pairwise DM matrix (all model pairs, all tails). Headline pairs are marked H.}\label{tab:dmappendix}
+""" + _dm_latex(dm, headline_only=False) + r"""
+\end{table}
+
 \section{Machine-Generated Data Audit}\label{sec:audit}
 \url{docs/DATA\_AUDIT.md} (generated by \texttt{scripts/audit\_data.py}).
 
 \section{Artifacts}
-All prediction panels: \path{outputs/predictions/*.parquet} with sidecar manifests; metric tables: \path{outputs/tables/*.csv}; figures: \texttt{outputs/figures/*.png}. Freeze manifest: \texttt{docs/FREEZE\_MANIFEST.md}.
+All prediction panels: \path{RUNPLACEHOLDER/predictions/*.parquet} with sidecar manifests; metric tables: \path{RUNPLACEHOLDER/tables/*.csv}; figures: \path{RUNPLACEHOLDER/figures/*.png}. Freeze manifest: \texttt{docs/FREEZE\_MANIFEST.md}.
 
 \begin{figure}[ht]
 \centering\includegraphics[width=\textwidth]{../outputs/figures/fig01_overview.png}
@@ -425,6 +470,8 @@ All prediction panels: \path{outputs/predictions/*.parquet} with sidecar manifes
 
 \end{document}
 """
+    run_dir_rel = Path("..") / out_root
+    tex = tex.replace("RUNPLACEHOLDER", str(run_dir_rel).replace(chr(92), "/"))
     return tex.replace("../outputs/figures/", f"{fig_dir}/")
 
 

@@ -21,9 +21,9 @@
 
 - 数据：SPY 日度 log_ret / rv5 / bv，4640 行（2000-01-04 ~ 2018-06-27），SHA256 277406a832c1418d... 冻结。
 - development 期：target date < 2008-01-01，rolling-origin 验证（公共目标 498 个，2006-01-06 ~ 2007-12-28）。
-- final test（重新冻结 230b3e9702b1，freeze commit 3cb2e21）：target date >= 2008-01-01，2641 个预测日（2008-01-02 ~ 2018-06-27），全部模型同日期集。
+- final test（重新冻结 e34928235ed6，freeze commit 3cb2e21）：target date >= 2008-01-01，2641 个预测日（2008-01-02 ~ 2018-06-27），全部模型同日期集。
 - 冻结内容：primary window=1500（等权归一化聚合，24 cells 中 23 个偏好 1500）、M3 hidden [32] / lr 1e-3 / wd 0 / batch 128、
-  M5 hidden 32 / lr 1e-3 / wd 0 / batch 64、primary seed 42、robustness seeds {7, 2026}、config SHA256 09a350fea0958017...、data SHA256 277406a8...
+  M5 hidden 32 / lr 1e-3 / wd 0 / batch 64、primary seed 42、robustness seeds {7, 2026}、config SHA256 058d5aea59044889...、data SHA256 277406a8...
 - 零泄漏约束：特征/标准化/early-stopping 全部限制在训练窗口内（截断不变性测试锁定）；MLP/GRU target 采用 train-only 标准化（Scheme B）。
 - 冻结门禁（强化）：data/config/code signature + working tree clean（freeze 时）+ effective data path 校验；正式产物隔离于 `outputs/runs/<freeze_id>/`，复用仅限签名一致。
 
@@ -46,7 +46,7 @@
 
 - **1% tail**：经验违例率最接近名义水平 = GJR-t（0.0144 vs 目标 0.01）；pinball 最低 = GJR-t（0.00034）。
 - **5% tail**：经验违例率最接近名义水平 = HS（0.0530 vs 目标 0.05）；pinball 最低 = GJR-t（0.00126）。
-- **10% tail**：经验违例率最接近名义水平 = HS（0.0966 vs 目标 0.10）；pinball 最低 = GJR-t（0.00204）。
+- **10% tail**：经验违例率最接近名义水平 = MLP（0.0969 vs 目标 0.10）；pinball 最低 = GJR-t（0.00204）。
 
 ## 5. failure rate 与覆盖检验（修正后）
 
@@ -55,54 +55,54 @@
 | HS | 0.0155 | 0.0530 | 0.0966 | 0.008 | 0.000 | 0.000 |
 | GARCH-t | 0.0151 | 0.0629 | 0.1136 | 0.014 | 0.148 | 0.017 |
 | LinQR | 0.0216 | 0.0610 | 0.1125 | 0.000 | 0.041 | 0.000 |
-| MLP | 0.0329 | 0.0549 | 0.0962 | 0.000 | 0.009 | 0.000 |
+| MLP | 0.0231 | 0.0576 | 0.0969 | 0.000 | 0.065 | 0.000 |
 | GJR-t | 0.0144 | 0.0632 | 0.1079 | 0.033 | 0.577 | 0.089 |
-| GRU | 0.0322 | 0.0670 | 0.1166 | 0.000 | 0.000 | 0.000 |
+| GRU | 0.0363 | 0.0674 | 0.1352 | 0.000 | 0.000 | 0.000 |
 
-- 修正后 GARCH 族 1% 违例率 1.4-1.5%（仍偏保守，Kupiec p=0.01-0.03 拒绝）；HS 5%/10% 频率最接近目标但独立性检验 p<0.001（违例强聚集）。
-- 条件充分性：GARCH 族 1%/5% Ind/CC 未被拒绝；HS 违例聚集使其不能被称为条件校准良好 —— 正确频率 ≠ 正确条件 VaR 动态。
+- 修正后 GARCH 族 1% 违例率 1.4-1.5%，**高于**名义 1%（即 mildly under-conservative：VaR 不够负、违例偏多，Kupiec p=0.01-0.03 拒绝）；HS 5%/10% 频率最接近目标但独立性检验 p<0.001（违例强聚集）。
+- 条件充分性（逐模型）：违例独立性在 1%/5% 均未被明显拒绝；但条件覆盖并非普遍通过 —— 仅 GJR-t 的 1% CC 在 5% 水平不拒绝（p=0.089），GARCH-t 1% CC p=0.017 拒绝、两模型 5% CC 均拒绝（p=0.007/0.008）。正确频率 ≠ 正确条件 VaR 动态。
 
 ## 6. pinball loss 对比（修正后）
 
-- 1% tail：GJR-t(0.00034) < GARCH-t(0.00036) < MLP(0.00047) < LinQR(0.00052) < HS(0.00062) < GRU(0.00063)
-- 5% tail：GJR-t(0.00126) < GARCH-t(0.00129) < LinQR(0.00133) < MLP(0.00135) < GRU(0.00146) < HS(0.00169)
-- 10% tail：GJR-t(0.00204) < GARCH-t(0.00207) < LinQR(0.00208) < GRU(0.00222) < MLP(0.00223) < HS(0.00244)
+- 1% tail：GJR-t(0.00034) < GARCH-t(0.00036) < MLP(0.00043) < LinQR(0.00052) < HS(0.00062) < GRU(0.00068)
+- 5% tail：GJR-t(0.00126) < GARCH-t(0.00129) < MLP(0.00131) < LinQR(0.00133) < GRU(0.00150) < HS(0.00169)
+- 10% tail：GJR-t(0.00204) < GARCH-t(0.00207) < LinQR(0.00208) < MLP(0.00219) < GRU(0.00224) < HS(0.00244)
 
 ## 7. 特征消融（F0 returns → F1 +RV → F2 +BV → F3 +jump/downside block）
 
 - LinQR 5% tail pinball：F0(0.00138) → F1(0.00132) → F2(0.00132) → F3(0.00133)
-- MLP 5% tail pinball：F0(0.00137) → F1(0.00132) → F2(0.00133) → F3(0.00135)
+- MLP 5% tail pinball：F0(0.00137) → F1(0.00134) → F2(0.00130) → F3(0.00131)
 - **RV 增量**（F0→F1）：线性 -4.3%，MLP 有增量 —— RV 信息有值。
 - **BV 条件增量**（F1→F2）：≈0 —— BV 在 RV 之后边际增量很小。
 - **F3 jump/downside block 增量**（F2→F3）：很小或为负 —— 整块效果，不单独归因 jump。
 
 ## 8. 危机与 regime 发现（修正后，5% tail failure rate）
 
-- crisis_2008_2009：HS=0.156、GARCH-t=0.077、LinQR=0.077、MLP=0.073、GJR-t=0.079、GRU=0.137
-- elevated_2010_2012：HS=0.034、GARCH-t=0.069、LinQR=0.066、MLP=0.048、GJR-t=0.065、GRU=0.054
-- calm_2013_2014：HS=0.002、GARCH-t=0.056、LinQR=0.058、MLP=0.044、GJR-t=0.056、GRU=0.052
-- stress_2015_2016：HS=0.036、GARCH-t=0.060、LinQR=0.050、MLP=0.063、GJR-t=0.067、GRU=0.042
-- calm_2017：HS=0.012、GARCH-t=0.024、LinQR=0.024、MLP=0.024、GJR-t=0.020、GRU=0.024
-- spike_2018：HS=0.106、GARCH-t=0.089、LinQR=0.098、MLP=0.098、GJR-t=0.089、GRU=0.114
+- crisis_2008_2009：HS=0.156、GARCH-t=0.077、LinQR=0.077、MLP=0.071、GJR-t=0.079、GRU=0.133
+- elevated_2010_2012：HS=0.034、GARCH-t=0.069、LinQR=0.066、MLP=0.054、GJR-t=0.065、GRU=0.050
+- calm_2013_2014：HS=0.002、GARCH-t=0.056、LinQR=0.058、MLP=0.046、GJR-t=0.056、GRU=0.054
+- stress_2015_2016：HS=0.036、GARCH-t=0.060、LinQR=0.050、MLP=0.065、GJR-t=0.067、GRU=0.048
+- calm_2017：HS=0.012、GARCH-t=0.024、LinQR=0.024、MLP=0.020、GJR-t=0.020、GRU=0.028
+- spike_2018：HS=0.106、GARCH-t=0.089、LinQR=0.098、MLP=0.114、GJR-t=0.089、GRU=0.122
 
 - 观察 HS 的双向 regime 适应滞后：危机开始违例率过高（风险反应慢），危机结束进入平静期违例率过低（历史危机观测仍滞留在滚动尾部）—— 是 **slow two-sided regime adaptation**，而非单纯危机低估。
 
 ## 9. DM / bootstrap 结论（Holm 校正，headline 族）
 
-- GARCH-t vs MLP @1%：DM=-3.24 (raw p=0.0012, Holm p=0.0048, bootstrap p=0.023, favors a)
+- GARCH-t vs MLP @1%：DM=-2.06 (raw p=0.0395, Holm p=0.0790, bootstrap p=0.090, favors a)
 - GARCH-t vs GJR-t @1%：DM=2.26 (raw p=0.0235, Holm p=0.0705, bootstrap p=0.042, favors b)
-- LinQR vs MLP @1%：DM=0.71 (raw p=0.4760, Holm p=0.4760, bootstrap p=0.636, favors b)
-- MLP vs GRU @1%：DM=-1.97 (raw p=0.0483, Holm p=0.0966, bootstrap p=0.353, favors a)
-- GARCH-t vs MLP @5%：DM=-1.60 (raw p=0.1093, Holm p=0.3279, bootstrap p=0.103, favors a)
+- LinQR vs MLP @1%：DM=1.34 (raw p=0.1803, Holm p=0.1803, bootstrap p=0.472, favors b)
+- MLP vs GRU @1%：DM=-2.88 (raw p=0.0040, Holm p=0.0160, bootstrap p=0.227, favors a)
+- GARCH-t vs MLP @5%：DM=-0.50 (raw p=0.6148, Holm p=1.0000, bootstrap p=0.601, favors a)
 - GARCH-t vs GJR-t @5%：DM=3.16 (raw p=0.0016, Holm p=0.0063, bootstrap p=0.001, favors b)
-- LinQR vs MLP @5%：DM=-0.28 (raw p=0.7790, Holm p=0.7790, bootstrap p=0.811, favors a)
-- MLP vs GRU @5%：DM=-1.49 (raw p=0.1362, Holm p=0.3279, bootstrap p=0.452, favors a)
-- GARCH-t vs MLP @10%：DM=-3.49 (raw p=0.0005, Holm p=0.0015, bootstrap p=0.002, favors a)
-- GARCH-t vs GJR-t @10%：DM=2.77 (raw p=0.0057, Holm p=0.0114, bootstrap p=0.003, favors b)
-- LinQR vs MLP @10%：DM=-3.56 (raw p=0.0004, Holm p=0.0015, bootstrap p=0.005, favors a)
-- MLP vs GRU @10%：DM=0.14 (raw p=0.8895, Holm p=0.8895, bootstrap p=0.933, favors b)
+- LinQR vs MLP @5%：DM=0.52 (raw p=0.6054, Holm p=1.0000, bootstrap p=0.697, favors b)
+- MLP vs GRU @5%：DM=-2.22 (raw p=0.0266, Holm p=0.0799, bootstrap p=0.305, favors a)
+- GARCH-t vs MLP @10%：DM=-2.60 (raw p=0.0093, Holm p=0.0227, bootstrap p=0.012, favors a)
+- GARCH-t vs GJR-t @10%：DM=2.77 (raw p=0.0057, Holm p=0.0227, bootstrap p=0.003, favors b)
+- LinQR vs MLP @10%：DM=-2.73 (raw p=0.0064, Holm p=0.0227, bootstrap p=0.025, favors a)
+- MLP vs GRU @10%：DM=-0.69 (raw p=0.4886, Holm p=0.4886, bootstrap p=0.699, favors a)
 
-- 修正后 GJR-t（M4）在 1%/5%/10% 均优于 GARCH-t（Holm p 0.071/0.006/0.011）—— leverage 项有真实增量。
+- GJR-t（M4）在 5%/10% tail 显著优于 GARCH-t（Holm p=0.006/0.011，bootstrap 一致），1% tail 为方向性证据（Holm p=0.071 不显著）—— 非对称波动率设定带来预测损失改进，与 leverage/asymmetry 效应 consistent（本实验不做参数级 leverage 识别）。
 - MLP vs GARCH-t：1%/10% 显著更差（Holm p<0.01），5% 不显著（p=0.33）—— 负结果有 tail 依赖。
 - DM 与 bootstrap 不一致处（如 1% tail 的 M1 vs M3：DM 显著但 bootstrap p=0.10-0.15）如实报告为 inference sensitive to dependence/finite-sample procedure。
 
@@ -116,25 +116,25 @@
 
 | 模型 | tail | failure mean ± std | pinball mean ± std |
 |---|---|---|---|
-| MLP | 1% | 0.0312 ± 0.0016 | 0.00045 ± 0.00002 |
-| MLP | 5% | 0.0557 ± 0.0010 | 0.00132 ± 0.00002 |
-| MLP | 10% | 0.0964 ± 0.0008 | 0.00219 ± 0.00004 |
-| GRU | 1% | 0.0362 ± 0.0036 | 0.00069 ± 0.00005 |
-| GRU | 5% | 0.0670 ± 0.0015 | 0.00150 ± 0.00003 |
-| GRU | 10% | 0.1190 ± 0.0029 | 0.00225 ± 0.00004 |
+| MLP | 1% | 0.0321 ± 0.0078 | 0.00046 ± 0.00003 |
+| MLP | 5% | 0.0579 ± 0.0017 | 0.00132 ± 0.00002 |
+| MLP | 10% | 0.0972 ± 0.0023 | 0.00220 ± 0.00003 |
+| GRU | 1% | 0.0398 ± 0.0034 | 0.00070 ± 0.00003 |
+| GRU | 5% | 0.0690 ± 0.0017 | 0.00149 ± 0.00001 |
+| GRU | 10% | 0.1279 ± 0.0067 | 0.00224 ± 0.00001 |
 
 ## 12. 假设评级（H1-H7，修正后冻结证据）
 
 | 假设 | Verdict | 关键证据 |
 |---|---|---|
-| H1 HS regime adaptation lag | supported | 2008-2009 违例率显著高于目标（HS 明显高于 GARCH 族）；平静期反向过度保守（双向滞后） |
-| H2 GARCH-t 改善 VaR | supported | 三 tail pinball 最低；1% 校准 1.5%（偏保守但远好于 HS 的聚集违例） |
-| H3a RV 增量 | supported | F0→F1 pinball 下降（线性 -4.3%） |
+| H1 HS regime adaptation lag | strongly supported | 2008-2009 违例率远超目标、平静期（2013-14/2017）违例率极低 —— 双向滞后（slow two-sided regime adaptation） |
+| H2 GARCH 型波动率模型改善 VaR | supported, calibration mixed | proper loss 三 tail 最低；但覆盖并非全面通过（1% UC 拒绝、5% CC 拒绝） |
+| H3a RV 增量 | supported（主要在 5%/10% tail） | F0→F1 pinball 下降（线性 -4.4%） |
 | H3b BV 条件增量 | unsupported | F1→F2 ≈ 0 |
-| H4 MLP 绝对增量 | unsupported | 三 tail pinball 均高于 GARCH 族；1%/10% Holm 显著更差 |
-| H5 非线性映射价值 | unsupported（5%/10% tail） | MLP vs LinQR：10% Holm p=0.0015 显著更差；1%/5% 不显著 |
-| H6 tail 依赖 | supported | GJR 优势随 tail 变化；MLP 差距 5% 不显著、1%/10% 显著 |
-| H7 jump/downside block 极端 tail 增量 | not identified（描述性） | F3 整块效果很小；无 component identification，不单独归因 jump |
+| H4 MLP 绝对增量 | unsupported | 三 tail pinball 均不优于 GARCH 族；1%/10% Holm 显著更差 |
+| H5 非线性映射价值 | unsupported / inconclusive | 10% tail 显著更差（Holm p=0.0015）；1%/5% 无清晰优势；joint loss+non-crossing 使其非纯 mapping control |
+| H6 tail 依赖的相对表现 | supported | 校准与 DM 差异随 tail 明显变化（GJR 5/10% 显著、1% 方向性） |
+| H7 jump/downside block 极端 tail 增量 | not identified | F3 为联合 block 且总体无稳定增量；无 component identification |
 
 ## 13. 哪些结论可靠，哪些只是描述性
 
@@ -145,7 +145,9 @@
 ## 14. 项目主要局限
 
 - 1% tail 期望违例少，覆盖检验功效低；单一资产（SPY ETF）；2018 数据仅至 6 月；rv5/bv 为日度聚合。
-- NN 计算成本约为经典模型 10 倍且无绝对增量；GRU 1% tail seed sensitivity。
+- NN 计算成本约为经典模型 10 倍且无绝对增量；GRU 1% tail seed sensitivity（std 0.36%）。
+- **NN 训练协议局限**：early stopping 用窗口最后 10% 做验证集，最佳 epoch 确定后未在完整窗口 refit —— NN 实际梯度训练仅用约 90% 的窗口（W=1500 时约 1350 天），且被排除的恰是最新约 150 天；GARCH/分位数回归用全窗口。本轮按研究纪律未改（final 已看过，改训练协议有 test-driven 嫌疑），列为明确 limitation。
+- **Neural 搜索功效有限**：搜索仅 101 个 rolling origins（2006-2007 每 5 日取 1），selection criterion 为三 tail pinball 未归一化平均（10% 尺度天然更大 → 权重更高）；grid 预先声明未扩大。
 - DM vs bootstrap 在极端 tail 结论不一致处只能如实呈现。
 
 ## 15. 面试时最值得解释的五个问题
@@ -157,4 +159,4 @@
 5. **冻结门禁怎么防造假？** data/config/code signature + 工作树检查 + effective data path + canonical run 隔离 + 实验签名复用校验。
 
 ---
-生成时间与实验产物对应：canonical run `outputs/runs/230b3e9702b1-09a350fe`；冻结清单 `docs/FREEZE_MANIFEST.md`；审计记录 `docs/AUDIT_REMEDIATION.md`。
+生成时间与实验产物对应：canonical run `outputs/runs/e34928235ed6-058d5aea`；冻结清单 `docs/FREEZE_MANIFEST.md`；审计记录 `docs/AUDIT_REMEDIATION.md`。

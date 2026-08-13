@@ -5,23 +5,23 @@
       "dropout": 0.0,
       "epochs": 300,
       "hidden": [
-        32
+        16
       ],
       "lr": 0.001,
       "patience": 30,
-      "weight_decay": 0.0
+      "weight_decay": 0.0001
     },
-    "pinball_mean": 0.0010231409830199364
+    "pinball_mean": 0.00087449798292707
   },
   "M5": {
     "best": {
       "batch_size": 64,
       "epochs": 300,
-      "hidden": 32,
+      "hidden": 16,
       "lr": 0.001,
       "patience": 30,
       "weight_decay": 0.0
     },
-    "pinball_mean": 0.001032080457677309
+    "pinball_mean": 0.0008117701355761054
   }
 }
