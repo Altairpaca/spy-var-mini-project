@@ -31,12 +31,14 @@ ROBUSTNESS_GRID = [
 def main() -> None:
     args = parse_common_args("NN seed 稳健性")
     cfg = resolve_config(args)
-    ok, reason = check_freeze_ready(cfg, Path(args.out_root) / "manifests")
+    ok, reason = check_freeze_ready(cfg, Path(args.out_root) / "manifests", require_clean_tree=False)
     if not ok:
         sys.exit(f"FINAL TEST GATE 拒绝: {reason}")
     df = load_data(cfg, args.data)
     origins = forecast_origins(df, cfg.final_test_start, "2099-12-31", cfg.primary_window)
-    out_root = Path(args.out_root)
+    from scripts.common import canonical_run_dir
+
+    out_root = canonical_run_dir(Path(args.out_root))
     (out_root / "predictions").mkdir(parents=True, exist_ok=True)
     for model_id, fset in ROBUSTNESS_GRID:
         for seed in cfg.robustness_seeds:

@@ -47,7 +47,10 @@ def working_tree_clean() -> tuple[bool, str]:
         )
     except Exception as e:  # noqa: BLE001
         return False, f"cannot run git status: {e}"
-    lines = [l for l in out.stdout.splitlines() if not l.startswith("?? .omo/")]
+    lines = [
+        l for l in out.stdout.splitlines()
+        if not l.startswith(("?? .omo/", "?? outputs/"))
+    ]
     if lines:
         return False, f"working tree not clean: {lines[:3]}"
     return True, "clean"

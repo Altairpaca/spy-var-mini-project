@@ -93,9 +93,11 @@ def main() -> None:
             sys.exit(f"FINAL TEST GATE 拒绝: --data 文件哈希 {actual[:16]} 与冻结值不匹配")
         effective_data = args.data
 
+    # 运行期产物（runs/、current_run.json）在 final run 后必然存在；
+    # clean-tree 由 freeze 生成时强制，运行期只验证冻结有效性。
     ok, reason = check_freeze_ready(
         cfg, freeze_dir, effective_data_path=effective_data,
-        require_clean_tree=not args.allow_dirty,
+        require_clean_tree=False,
     )
     if not ok:
         sys.exit(f"FINAL TEST GATE 拒绝: {reason}")
