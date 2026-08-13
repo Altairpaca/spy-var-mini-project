@@ -52,6 +52,19 @@
 - [ ] 窗口/特征/超参选择记录（本文件追加）
 - [ ] configs/final.yaml 定稿 + freeze_final.py + 冻结 commit
 
+### 2026-08-13 — 审计修复决策记录（final test 之前）
+- Student-t VaR 尺度 bug：arch innovation 为方差 1 标准化 t；分位数用 StudentsT().ppf
+  （等价 scipy t × sqrt((nu-2)/nu)）。旧 M1/M4 全部 final/dev 结果 INVALIDATED。
+- target-date 分区：dev/final 按被预测日期划分（target_date < 2008-01-01 为 dev）。
+- MLP/GRU 方案 B：train-only target 标准化（初始 softplus gap ~0.693 远超日收益
+  分位差量级）；仿射保序，不改变 non-crossing 结构。未扩大网络规模。
+- 窗口选择聚合：每 (model, feature-set, tail) 候选相对归一化损失等权平均；
+  报告 per-cell winner / win count / drop-one sensitivity；不一致时保守选长窗口。
+- DM headline 族（M1-M3, M2-M3, M3-M5, M1-M4）逐 tail Holm 校正；全矩阵为附录。
+- seed robustness：primary 42 + {7, 2026} => n_seeds=3，mean/std 汇总。
+- DQ 保留为 auxiliary diagnostic（已有 power/size 测试）。
+- 冻结门禁：data/config/code signature + working tree clean + effective data path。
+- 正式 final 输出隔离到 outputs/runs/<freeze_id>/；artifact 复用仅限签名一致。
 ### 2026-08-12 — 仓库初始状态
 - main 分支两个初始 commit；README/AGENTS/EXPERIMENT_SPEC/ENVIRONMENT/RESULTS_SCHEMA/RESEARCH_LOG 等 bootstrap 文档齐全。
 - 本日志初始段由 bootstrap 写入（2026-08-11 条目为模板遗留，保留作为历史）。
