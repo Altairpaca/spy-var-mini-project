@@ -49,7 +49,7 @@ def _metrics_latex(metrics: pd.DataFrame, primary: dict) -> str:
                 f"{_fmt(r['christoffersen_ind_pvalue'])} & {_fmt(r['conditional_coverage_pvalue'])} & "
                 f"{_fmt(r['mean_pinball'])}\\\\\n"
             )
-    return "\\begin{tabular}{lrrrrrrr}\n" + "".join(rows) + "\\hline\n\\end{tabular}"
+    return "\\small\\begin{tabular}{lrrrrrrr}\n" + "".join(rows) + "\\hline\n\\end{tabular}"
 
 
 def _ablation_latex(metrics: pd.DataFrame) -> str:
@@ -85,7 +85,7 @@ def _dm_latex(dm: pd.DataFrame) -> str:
     header = (BS + BS + 'textbf{Pair} & ' + BS + BS + 'textbf{Tail} & ' + BS + BS + 'textbf{DM} & '
              + BS + BS + 'textbf{DM p}' + holm_header + ' & ' + BS + BS + 'textbf{Boot p} & '
              + BS + BS + 'textbf{Favors} & ' + BS + BS + 'textbf{Headline}' + BS + BS + NL)
-    return BS + "begin{tabular}{llrrrrrl}" + NL + header + "".join(rows) + BS + "end{tabular}"
+    return BS + "footnotesize" + BS + "begin{tabular}{llrrrrrl}" + NL + header + "".join(rows) + BS + "end{tabular}"
 def _regime_latex(regime: pd.DataFrame, primary: dict) -> str:
     m = regime.copy()
     m = m[m.apply(lambda r: primary.get(r["model"]) == r["feature_set"], axis=1)]
@@ -172,9 +172,8 @@ def _conclusion_latex(metrics: pd.DataFrame, dm: pd.DataFrame, regime: pd.DataFr
         "This is a valid negative result on this information set and window."
     )
 
-    # 4) ablation deltas computed from the ablation table
-    abl = pd.read_csv(Path(__file__).resolve().parent.parent / "outputs" / "tables" / "ablation.csv")
-    abl5 = abl[abl["tail"] == 0.05]
+    # 4) ablation deltas computed from the metrics table (F0 vs F3 at the 5% tail)
+    abl5 = metrics[metrics["tail"] == 0.05]
     deltas = []
     for model in ("M2", "M3"):
         sub = abl5[abl5["model"] == model].sort_values("feature_set")
@@ -208,6 +207,7 @@ def forecast_count(out_root: Path) -> int:
 
 
 def build_latex(cfg, out_root: Path, freeze: dict | None, audit: dict | None) -> str:
+    fig_dir = Path("..") / out_root / "figures"
     metrics = pd.read_csv(out_root / "tables" / "metrics.csv")
     dm = pd.read_csv(out_root / "tables" / "dm_comparison.csv")
     regime = pd.read_csv(out_root / "tables" / "regime_metrics.csv")
@@ -216,7 +216,7 @@ def build_latex(cfg, out_root: Path, freeze: dict | None, audit: dict | None) ->
     seed = cfg.primary_seed
     n_dates = forecast_count(out_root)
 
-    return r"""\documentclass[11pt]{article}
+    tex = r"""\documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{booktabs}
 \usepackage{graphicx}
@@ -225,6 +225,7 @@ def build_latex(cfg, out_root: Path, freeze: dict | None, audit: dict | None) ->
 \usepackage{caption}
 \usepackage{hyperref}
 \hypersetup{hidelinks}
+\sloppy
 \captionsetup{font=small,labelfont=bf}
 \newcommand{\rot}[1]{\begin{turn}{0}#1\end{turn}}
 \usepackage{rotating}
@@ -263,7 +264,7 @@ where $z_t$ is an i.i.d.\ unit-variance standardized Student-$t$ innovation with
 \begin{equation}
 \mathrm{VaR}_{\alpha,t+1} = \mu + F_t^{-1}(\alpha;\nu)\,\hat\sigma_{t+1},
 \end{equation}
-with $F_t^{-1}(\alpha;\nu)$ the quantile of the standardized Student-$t$ (implemented via \texttt{arch.univariate.StudentsT}, equal to $t_\nu^{-1}(\alpha)\sqrt{(\nu-2)/\nu}$); $\mu$ is a constant mean. Parameters are re-estimated by MLE on every rolling window.
+with $F_t^{-1}(\alpha;\nu)$ the quantile of the standardized Student-$t$ (implemented via \texttt{arch.univariate.\allowbreak StudentsT}, equal to $t_\nu^{-1}(\alpha)\sqrt{(\nu-2)/\nu}$); $\mu$ is a constant mean. Parameters are re-estimated by MLE on every rolling window.
 
 \subsection{M4 -- GJR-GARCH(1,1,1)-Student-$t$}
 Adds a leverage term to the variance recursion,
@@ -302,7 +303,7 @@ A unified rolling engine controls window boundaries, feature cutoffs, preprocess
 Per model and tail: empirical failure rate, Kupiec unconditional coverage test, Christoffersen independence and conditional-coverage tests, mean pinball loss, quantile-crossing rate, violation clustering, Dynamic Quantile test (reported as an additional diagnostic), Diebold--Mariano tests and moving-block bootstrap for pairwise loss comparisons. Finite-sample caveats apply: the 1\% tail has very few expected violations even in a decade-long test, so coverage tests have low power and small numerical differences must not be over-read.
 
 \section{Development / Validation Results}\label{sec:dev}
-Window comparison tables: \texttt{outputs/development/window\_selection.csv} and \texttt{window\_selection\_cells.csv}. Decision rule (predeclared, audit-fixed aggregation): per (model, feature-set, tail) cell the candidate-relative normalized loss (cell loss divided by the cell mean across the two candidates) is averaged with equal weight across all cells; per-cell winners, pairwise win counts and drop-one sensitivity are reported alongside. If the equal-weight aggregate and the raw pinball-sum aggregate disagree, the longer window is chosen conservatively for 1\% tail stability. The longer window provides more effective tail observations for the 1\% quantile (about 15 vs 10 expected violations) and hence more stable empirical quantiles, at the cost of slower regime adaptation; the short window adapts faster. The primary window selected from development evidence is \textbf{\texttt{""" + str(w) + r"""}}.
+Window comparison tables: \path{outputs/development/window_selection.csv} and \path{window_selection_cells.csv}. Decision rule (predeclared, audit-fixed aggregation): per (model, feature-set, tail) cell the candidate-relative normalized loss (cell loss divided by the cell mean across the two candidates) is averaged with equal weight across all cells; per-cell winners, pairwise win counts and drop-one sensitivity are reported alongside. If the equal-weight aggregate and the raw pinball-sum aggregate disagree, the longer window is chosen conservatively for 1\% tail stability. The longer window provides more effective tail observations for the 1\% quantile (about 15 vs 10 expected violations) and hence more stable empirical quantiles, at the cost of slower regime adaptation; the short window adapts faster. The primary window selected from development evidence is \textbf{\texttt{""" + str(w) + r"""}}.
 
 \section{Frozen Out-of-Sample Results}\label{sec:oos}
 All models evaluated on \texttt{""" + str(n_dates) + r"""} identical forecast dates ($\ge$ 2008-01-01). Primary seed \texttt{""" + str(seed) + r"""}. Table~\ref{tab:metrics} reports coverage and loss statistics.
@@ -358,20 +359,20 @@ The conclusion is drawn from the frozen out-of-sample evidence in Section~\ref{s
 
 \section{References}
 \begin{itemize}
-\item Kupiec, P. (1995). Techniques for Verifying the Accuracy of Risk Measurement Models. \emph{Journal of Derivatives}, 3(2), 73--84. DOI: 10.3905/jod.1995.407942
-\item Christoffersen, P. (1998). Evaluating Interval Forecasts. \emph{International Economic Review}, 39(4), 841--862. DOI: 10.2307/2527341
-\item Engle, R. (1982). Autoregressive Conditional Heteroscedasticity with Estimates of the Variance of United Kingdom Inflation. \emph{Econometrica}, 50(4), 987--1007. DOI: 10.2307/1912773
-\item Bollerslev, T. (1986). Generalized Autoregressive Conditional Heteroskedasticity. \emph{Journal of Econometrics}, 31(3), 307--327. DOI: 10.1016/0304-4076(86)90063-1
-\item Glosten, L., Jagannathan, R., Runkle, D. (1993). On the Relation between the Expected Value and the Volatility of the Nominal Excess Return on Stocks. \emph{Journal of Finance}, 48(5), 1779--1801. DOI: 10.1111/j.1540-6261.1993.tb05128.x
-\item Koenker, R., Bassett, G. (1978). Regression Quantiles. \emph{Econometrica}, 46(1), 33--50. DOI: 10.2307/1913643
-\item Engle, R., Manganelli, S. (2004). CAViaR: Conditional Autoregressive Value at Risk by Regression Quantiles. \emph{Journal of Business \& Economic Statistics}, 22(4), 367--381. DOI: 10.1198/073500104000000370
-\item Andersen, T., Bollerslev, T., Diebold, F., Labys, P. (2003). Modeling and Forecasting Realized Volatility. \emph{Econometrica}, 71(2), 579--625. DOI: 10.1111/1468-0262.00418
-\item Barndorff-Nielsen, O., Shephard, N. (2004). Power and Bipower Variation with Stochastic Volatility and Jumps. \emph{Journal of Financial Econometrics}, 2(1), 1--37. DOI: 10.1093/jjfinec/nbh001
-\item Corsi, F. (2009). A Simple Approximate Long-Memory Model of Realized Volatility. \emph{Journal of Financial Econometrics}, 7(2), 174--196. DOI: 10.1093/jjfinec/nbp001
-\item Diebold, F., Mariano, R. (1995). Comparing Predictive Accuracy. \emph{Journal of Business \& Economic Statistics}, 13(3), 253--263. DOI: 10.1080/07350015.1995.10524599
-\item Koenker, R. (2005). \emph{Quantile Regression}. Cambridge University Press. DOI: 10.1017/CBO9780511754098
-\item Taylor, J. (2000). A Quantile Regression Neural Network Approach to Estimating the Conditional Density of Multiperiod Returns. \emph{Journal of Forecasting}, 19(4), 299--311. DOI: 10.1002/1099-131X(200007)19:4<299::AID-FOR775>3.0.CO;2-V
-\item Patton, A., Sheppard, K. (2015). Good Volatility, Bad Volatility: Signed Jumps and the Persistence of Volatility. \emph{Review of Economics and Statistics}, 97(3), 683--697. DOI: 10.1162/REST\_a\_00503
+\item Kupiec, P. (1995). Techniques for Verifying the Accuracy of Risk Measurement Models. \emph{Journal of Derivatives}, 3(2), 73--84. DOI: \url{10.3905/jod.1995.407942}
+\item Christoffersen, P. (1998). Evaluating Interval Forecasts. \emph{International Economic Review}, 39(4), 841--862. DOI: \url{10.2307/2527341}
+\item Engle, R. (1982). Autoregressive Conditional Heteroscedasticity with Estimates of the Variance of United Kingdom Inflation. \emph{Econometrica}, 50(4), 987--1007. DOI: \url{10.2307/1912773}
+\item Bollerslev, T. (1986). Generalized Autoregressive Conditional Heteroskedasticity. \emph{Journal of Econometrics}, 31(3), 307--327. DOI: \url{10.1016/0304-4076(86)90063-1}
+\item Glosten, L., Jagannathan, R., Runkle, D. (1993). On the Relation between the Expected Value and the Volatility of the Nominal Excess Return on Stocks. \emph{Journal of Finance}, 48(5), 1779--1801. DOI: \url{10.1111/j.1540-6261.1993.tb05128.x}
+\item Koenker, R., Bassett, G. (1978). Regression Quantiles. \emph{Econometrica}, 46(1), 33--50. DOI: \url{10.2307/1913643}
+\item Engle, R., Manganelli, S. (2004). CAViaR: Conditional Autoregressive Value at Risk by Regression Quantiles. \emph{Journal of Business \& Economic Statistics}, 22(4), 367--381. DOI: \url{10.1198/073500104000000370}
+\item Andersen, T., Bollerslev, T., Diebold, F., Labys, P. (2003). Modeling and Forecasting Realized Volatility. \emph{Econometrica}, 71(2), 579--625. DOI: \url{10.1111/1468-0262.00418}
+\item Barndorff-Nielsen, O., Shephard, N. (2004). Power and Bipower Variation with Stochastic Volatility and Jumps. \emph{Journal of Financial Econometrics}, 2(1), 1--37. DOI: \url{10.1093/jjfinec/nbh001}
+\item Corsi, F. (2009). A Simple Approximate Long-Memory Model of Realized Volatility. \emph{Journal of Financial Econometrics}, 7(2), 174--196. DOI: \url{10.1093/jjfinec/nbp001}
+\item Diebold, F., Mariano, R. (1995). Comparing Predictive Accuracy. \emph{Journal of Business \& Economic Statistics}, 13(3), 253--263. DOI: \url{10.1080/07350015.1995.10524599}
+\item Koenker, R. (2005). \emph{Quantile Regression}. Cambridge University Press. DOI: \url{10.1017/CBO9780511754098}
+\item Taylor, J. (2000). A Quantile Regression Neural Network Approach to Estimating the Conditional Density of Multiperiod Returns. \emph{Journal of Forecasting}, 19(4), 299--311. DOI: \url{10.1002/1099-131X(200007)19:4<299::AID-FOR775>3.0.CO;2-V}
+\item Patton, A., Sheppard, K. (2015). Good Volatility, Bad Volatility: Signed Jumps and the Persistence of Volatility. \emph{Review of Economics and Statistics}, 97(3), 683--697. DOI: \url{10.1162/REST\_a\_00503}
 \end{itemize}
 
 \appendix
@@ -379,7 +380,7 @@ The conclusion is drawn from the frozen out-of-sample evidence in Section~\ref{s
 \url{docs/DATA\_AUDIT.md} (generated by \texttt{scripts/audit\_data.py}).
 
 \section{Artifacts}
-All prediction panels: \texttt{outputs/predictions/*.parquet} with sidecar manifests; metric tables: \texttt{outputs/tables/*.csv}; figures: \texttt{outputs/figures/*.png}. Freeze manifest: \texttt{docs/FREEZE\_MANIFEST.md}.
+All prediction panels: \path{outputs/predictions/*.parquet} with sidecar manifests; metric tables: \path{outputs/tables/*.csv}; figures: \texttt{outputs/figures/*.png}. Freeze manifest: \texttt{docs/FREEZE\_MANIFEST.md}.
 
 \begin{figure}[ht]
 \centering\includegraphics[width=\textwidth]{../outputs/figures/fig01_overview.png}
@@ -424,12 +425,15 @@ All prediction panels: \texttt{outputs/predictions/*.parquet} with sidecar manif
 
 \end{document}
 """
+    return tex.replace("../outputs/figures/", f"{fig_dir}/")
 
 
 def main() -> None:
+    from scripts.common import canonical_run_dir
+
     args = parse_common_args("PDF 报告生成")
     cfg = resolve_config(args)
-    out_root = Path(args.out_root)
+    out_root = canonical_run_dir(Path(args.out_root))
     freeze_path = out_root / "manifests" / "freeze.json"
     freeze = json.loads(freeze_path.read_text(encoding="utf-8")) if freeze_path.exists() else None
     audit_path = out_root / "tables" / "data_audit.json"

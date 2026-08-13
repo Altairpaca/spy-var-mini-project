@@ -254,14 +254,18 @@ def main() -> None:
     if len(rob):
         for (model, fset, seed), g in rob.groupby(["model_id", "feature_set", "seed"]):
             for alpha in cfg.tails:
-                rob_rows.append(_metric_row(g, alpha, model, fset, f"rob-{model}-{fset}-s{seed}"))
+                row = _metric_row(g, alpha, model, fset, f"rob-{model}-{fset}-s{seed}")
+                row["seed"] = int(seed)
+                rob_rows.append(row)
     for model in ("M3", "M5"):
         for alpha in cfg.tails:
             key = (panels["model_id"] == model) & (panels["feature_set"] == "F3")
             g = panels[key]
             if not len(g):
                 continue
-            rob_rows.append(_metric_row(g, alpha, model, "F3", f"primary-{model}-F3-s{cfg.primary_seed}"))
+            row = _metric_row(g, alpha, model, "F3", f"primary-{model}-F3-s{cfg.primary_seed}")
+            row["seed"] = int(cfg.primary_seed)
+            rob_rows.append(row)
     if rob_rows:
         pd.DataFrame(rob_rows).to_csv(out_root / "tables" / "seed_robustness.csv", index=False)
         summ = pd.DataFrame(rob_rows).groupby(["model", "feature_set", "tail"]).agg(

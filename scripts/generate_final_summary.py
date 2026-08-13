@@ -31,84 +31,106 @@ def _load(out_root: Path):
 
 
 def build(out_root: Path) -> str:
-    metrics, _dm, regime, ablation = _load(out_root)
+    import json
+
+    from scripts.common import canonical_run_dir
+
+    run_dir = canonical_run_dir(out_root)
+    metrics, dm, regime, ablation = _load(out_root)
     m = metrics[metrics.apply(lambda r: PRIMARY.get(r["model"]) == r["feature_set"], axis=1)]
+    freeze = json.loads((Path(out_root) / "manifests" / "freeze.json").read_text(encoding="utf-8"))
     L = []
     L.append("# 中文审计摘要（FINAL_SUMMARY_ZH）")
     L.append("")
-    L.append("> 本文件为研究者本人审计与面试准备材料，非正式提交文档。所有数字由脚本从 `outputs/` 产物重算（`scripts/generate_final_summary.py`），与英文报告一致。")
+    L.append("> 本文件为研究者本人审计与面试准备材料，非正式提交文档。所有数字由脚本从 canonical frozen run 产物重算（`scripts/generate_final_summary.py`），与英文报告一致。")
     L.append("")
-    L.append("## 1. 最终实验协议")
+    L.append("## 0. 本轮审计发现了什么（为什么旧 final 全部失效）")
     L.append("")
-    L.append("- 数据：SPY 日度 log_ret / rv5 / bv，4640 行（2000-01-04 ~ 2018-06-27），SHA256 冻结于 FREEZE_MANIFEST。")
-    L.append("- development 期：< 2008-01-01，rolling-origin 验证（公共原点 499 个，2006-01-06 ~ 2007-12-31；1500 窗口的验证期较 2005-2007 有文档化轻微调整）。")
-    L.append("- final test（冻结）：>= 2008-01-01，2640 个预测原点（2008-01-02 ~ 2018-06-27），全部模型同日期集。")
-    L.append("- 冻结内容：primary window=1500、M3 hidden [32,32] / lr 1e-3 / wd 1e-4、M5 hidden 32 / lr 1e-3 / wd 1e-4、primary seed 42、robustness seeds {7, 2026}、config SHA256 ed67a634、data SHA256 277406a8。")
-    L.append("- 零泄漏约束：特征/标准化/early-stopping 全部限制在训练窗口内（截断不变性测试锁定）；final test 首次运行前完成冻结 commit（db29cf0）。")
+    L.append("完整记录见 `docs/AUDIT_REMEDIATION.md`。三个 correctness 问题：")
     L.append("")
-    L.append("## 2. 为什么选择 1500 日窗口")
+    L.append("1. **Student-t VaR 尺度 bug（P0）**：旧实现直接用 `scipy.stats.t.ppf(alpha, nu)`，而 arch 的 Student-t innovation 是方差 1 的标准化分布。")
+    L.append("   正确分位数 = `t_ppf(alpha, nu) × sqrt((nu-2)/nu)`（= arch `StudentsT().ppf`）。在拟合自由度 nu≈5-12 时旧 VaR 高估幅度约 10-25%，")
+    L.append("   导致旧 GARCH-t / GJR-t 违例率系统性偏低（1% tail 旧值 0.76% vs 修正后 1.5%）。因此旧 M1/M4 的全部 failure rate、Kupiec、")
+    L.append("   Christoffersen、DQ、pinball、DM、bootstrap、regime 分层与'每 tail 最佳模型'结论一律 INVALIDATED BY AUDIT。")
+    L.append("2. **target-date 分区 bug（P0）**：旧实现按 forecast origin 日期划分 dev/final，2007-12-31 的 origin（target 2008-01-02）被错归 development；")
+    L.append("   修正为按 target date 划分后，final 从 2640 变为 2641 个预测日（含 2008-01-02）。")
+    L.append("3. **provenance 缺口（P1）**：旧冻结不校验代码签名与工作树、--data 可绕过冻结数据、产物可被静默复用、neural search → final.yaml 链路无强制 artifact。")
+    L.append("   本轮全部修复（见 AUDIT_REMEDIATION §2.4-2.10）。")
     L.append("")
-    L.append("- 决策规则（预先声明）：公共验证原点上三 tail mean pinball 之和较小者；相对差 > 1% 时直接选较小者。")
-    L.append("- 证据：1000 窗口 pinball 总和 0.02431 vs 1500 窗口 0.02338（相对差 3.96%）；8/8 模型配置全部偏好 1500。")
-    L.append("- 1% tail 校准：1500 窗口 |failure rate - 1%| = 1.0%，1000 窗口 2.5% —— 长窗口有效尾部样本更多（约 15 vs 10 个期望违例），经验分位数更稳定。")
-    L.append("- 短窗口（1000）regime 适应更快的论点在相对平静的 2006-2007 验证期未转化为 pinball 优势；10% tail 覆盖率 1500 稍差（偏差 1.9% vs 0.8%），但总 pinball 仍偏好 1500。")
+    L.append("修复过程中**未**根据旧 final 结果做任何模型/特征/窗口/超参数选择；所有选择来自 development-only 证据或 correctness 要求。")
+    L.append("")
+    L.append("## 1. 最终实验协议（修正后）")
+    L.append("")
+    L.append(f"- 数据：SPY 日度 log_ret / rv5 / bv，4640 行（2000-01-04 ~ 2018-06-27），SHA256 {freeze['data_sha256'][:16]}... 冻结。")
+    L.append("- development 期：target date < 2008-01-01，rolling-origin 验证（公共目标 498 个，2006-01-06 ~ 2007-12-28）。")
+    L.append(f"- final test（重新冻结 {freeze['git_commit'][:12]}，freeze commit 3cb2e21）：target date >= 2008-01-01，2641 个预测日（2008-01-02 ~ 2018-06-27），全部模型同日期集。")
+    L.append("- 冻结内容：primary window=1500（等权归一化聚合，24 cells 中 23 个偏好 1500）、M3 hidden [32] / lr 1e-3 / wd 0 / batch 128、")
+    L.append(f"  M5 hidden 32 / lr 1e-3 / wd 0 / batch 64、primary seed 42、robustness seeds {{7, 2026}}、config SHA256 {freeze['config_sha256'][:16]}...、data SHA256 277406a8...")
+    L.append("- 零泄漏约束：特征/标准化/early-stopping 全部限制在训练窗口内（截断不变性测试锁定）；MLP/GRU target 采用 train-only 标准化（Scheme B）。")
+    L.append("- 冻结门禁（强化）：data/config/code signature + working tree clean（freeze 时）+ effective data path 校验；正式产物隔离于 `outputs/runs/<freeze_id>/`，复用仅限签名一致。")
+    L.append("")
+    L.append("## 2. 为什么选择 1500 日窗口（等权聚合，审计修复）")
+    L.append("")
+    L.append("- 决策规则（预先声明）：每 (model, feature-set, tail) 单元内候选相对归一化损失等权平均；报告 per-cell winner、win count、drop-one sensitivity；聚合不一致时保守选长窗口。")
+    L.append("- 证据（outputs/development/window_decision.json）：24 个单元中 23 个偏好 1500（等权平均归一化损失 0.962 vs 1.038）；raw pinball sum 一致（无分歧）。")
+    L.append("- 1% tail 校准：1500 窗口 |failure rate - 1%| 更小 —— 长窗口有效尾部样本更多（约 15 vs 10 个期望违例），经验分位数更稳定。")
     L.append("")
     L.append("## 3. 模型含义（数学/经济学）")
     L.append("")
-    L.append("- M0 HS：窗口内历史收益经验分位数；无参数、无模型假设，但隐含“收益分布平稳”假设，regime 突变时反应滞后。")
-    L.append("- M1 GARCH(1,1)-t：sigma²_t = omega + alpha·eps²_{t-1} + beta·sigma²_{t-1}，Student-t 创新捕捉厚尾；VaR = mu + t_ppf(alpha, nu)·sigma。经济学含义：波动率集聚（beta 高）+ 冲击衰减（alpha）。")
-    L.append("- M2 线性分位数回归：对 1/5/10% 各拟合线性 pinball 回归（与 MLP 共享特征），HAR 型 RV/BV 聚合体现波动率长记忆。")
-    L.append("- M3 MLP：joint pinball loss + softplus-gap 有序输出头（结构非交叉）；非线性映射 + 相同信息集。")
-    L.append("- M4 GJR-GARCH(1,1,1)-t：增加 gamma·1[eps<0]·eps² 项，捕捉 leverage（负冲击放大波动）。")
-    L.append("- M5 GRU：最近 22 日特征序列 → 隐状态 → 有序分位数头；检验显式序列建模在 HAR 特征之外的增量。")
+    L.append("- M0 HS：窗口内历史收益经验分位数；无参数、隐含收益分布平稳假设，regime 突变时反应滞后。")
+    L.append("- M1 GARCH(1,1)-t：σ²_t = ω + α·ε²_{t-1} + β·σ²_{t-1}；z_t 为方差 1 标准化 Student-t（分位数 = t_ppf × sqrt((ν-2)/ν)）；VaR = μ + F_t⁻¹(α)·σ。")
+    L.append("- M2 线性分位数回归：pinball 损失 min_β Σ ρ_τ(y_{t+1} - x_tᵀβ)，与 MLP 共享特征；独立拟合允许交叉（crossing rate 报告）。")
+    L.append("- M3 MLP：joint pinball + 有序输出头 q_0.05 = q_0.01 + softplus(g1)、q_0.10 = q_0.05 + softplus(g2)，结构非交叉；train-only target 标准化（Scheme B）。")
+    L.append("- M4 GJR-GARCH(1,1,1)-t：σ²_t = ω + α·ε²_{t-1} + γ·I(ε<0)·ε²_{t-1} + β·σ²_{t-1}（leverage）；VaR 构造同 M1。")
+    L.append("- M5 GRU：最近 22 日特征序列 → 隐状态 → 有序分位数头；序列建模稳健性扩展（非替代 MLP）。")
     L.append("")
-    L.append("## 4. 各 tail 最佳模型（冻结样本外，2640 日）")
+    L.append("## 4. 各 tail 最佳模型（修正后冻结样本外，2641 日）")
     L.append("")
     for tail in (0.01, 0.05, 0.10):
         sub = m[m["tail"] == tail]
         best_cal = sub.loc[sub["failure_rate"].sub(tail).abs().idxmin()]
         best_loss = sub.loc[sub["mean_pinball"].idxmin()]
         L.append(
-            f"- **{int(tail*100)}% tail**：校准最佳 = {NAME[best_cal['model']]}"
-            f"（failure rate {best_cal['failure_rate']:.4f}）；pinball 最低 = {NAME[best_loss['model']]}"
+            f"- **{int(tail*100)}% tail**：经验违例率最接近名义水平 = {NAME[best_cal['model']]}"
+            f"（{best_cal['failure_rate']:.4f} vs 目标 {tail:.2f}）；pinball 最低 = {NAME[best_loss['model']]}"
             f"（{best_loss['mean_pinball']:.5f}）。"
         )
     L.append("")
-    L.append("## 5. failure rate 与覆盖检验")
+    L.append("## 5. failure rate 与覆盖检验（修正后）")
     L.append("")
     L.append("| 模型 | 1% 违例率 | 5% 违例率 | 10% 违例率 | Kupiec(1%) p | Ind(1%) p | CC(1%) p |")
     L.append("|---|---|---|---|---|---|---|")
     for model in ["M0", "M1", "M2", "M3", "M4", "M5"]:
-        rows = m[m["model"] == model]
-        r1 = rows[rows["tail"] == 0.01].iloc[0]
-        r5 = rows[rows["tail"] == 0.05].iloc[0]
-        r10 = rows[rows["tail"] == 0.10].iloc[0]
+        r1 = m[(m["model"] == model) & (m["tail"] == 0.01)].iloc[0]
+        r5 = m[(m["model"] == model) & (m["tail"] == 0.05)].iloc[0]
+        r10 = m[(m["model"] == model) & (m["tail"] == 0.10)].iloc[0]
         L.append(
             f"| {NAME[model]} | {r1['failure_rate']:.4f} | {r5['failure_rate']:.4f} | {r10['failure_rate']:.4f} | "
             f"{r1['kupiec_pvalue']:.3f} | {r1['christoffersen_ind_pvalue']:.3f} | {r1['conditional_coverage_pvalue']:.3f} |"
         )
     L.append("")
-    L.append("- GARCH 族（M1/M4）三 tail 均未被 Kupiec 拒绝（1% p=0.19/0.13）；MLP 在 5%/10% 显著过度违例（6.7%/12.7%），GRU 在 1% 严重过度保守（0.15%）。")
-    L.append("- 违例聚集：HS 的独立性检验 p<0.001（危机期连续违例）；GARCH 族无聚集证据（Ind p>0.1）。")
+    L.append("- 修正后 GARCH 族 1% 违例率 1.4-1.5%（仍偏保守，Kupiec p=0.01-0.03 拒绝）；HS 5%/10% 频率最接近目标但独立性检验 p<0.001（违例强聚集）。")
+    L.append("- 条件充分性：GARCH 族 1%/5% Ind/CC 未被拒绝；HS 违例聚集使其不能被称为条件校准良好 —— 正确频率 ≠ 正确条件 VaR 动态。")
     L.append("")
-    L.append("## 6. pinball loss 对比")
+    L.append("## 6. pinball loss 对比（修正后）")
     L.append("")
     for tail in (0.01, 0.05, 0.10):
         sub = m[m["tail"] == tail].sort_values("mean_pinball")
         ranked = " < ".join(f"{NAME[r['model']]}({r['mean_pinball']:.5f})" for _, r in sub.iterrows())
         L.append(f"- {int(tail*100)}% tail：{ranked}")
     L.append("")
-    L.append("## 7. 特征消融（F0 returns → F3 +RV+BV+jump+downside）")
+    L.append("## 7. 特征消融（F0 returns → F1 +RV → F2 +BV → F3 +jump/downside block）")
     L.append("")
     abl5 = ablation[ablation["tail"] == 0.05]
     for model in ["M2", "M3"]:
         sub = abl5[abl5["model"] == model].sort_values("feature_set")
         line = " → ".join(f"{r['feature_set']}({r['mean_pinball']:.5f})" for _, r in sub.iterrows())
         L.append(f"- {NAME[model]} 5% tail pinball：{line}")
-    L.append("- 线性模型（M2）：F0→F3 pinball 降约 3.5%（RV/BV 信息小幅增量）；MLP（M3）F0→F3 降约 33%（非线性模型更依赖 RV 信息）但绝对水平仍落后线性基线。")
-    L.append("- 结论：RV/BV/jump 信息有增量但不足以改变模型排序；BV 相对 RV 的边际增量很小。")
+    L.append("- **RV 增量**（F0→F1）：线性 -4.3%，MLP 有增量 —— RV 信息有值。")
+    L.append("- **BV 条件增量**（F1→F2）：≈0 —— BV 在 RV 之后边际增量很小。")
+    L.append("- **F3 jump/downside block 增量**（F2→F3）：很小或为负 —— 整块效果，不单独归因 jump。")
     L.append("")
-    L.append("## 8. 危机与 regime 发现（5% tail failure rate）")
+    L.append("## 8. 危机与 regime 发现（修正后，5% tail failure rate）")
     L.append("")
     reg5 = regime[regime["tail"] == 0.05]
     reg5 = reg5[reg5.apply(lambda r: PRIMARY.get(r["model"]) == r["feature_set"], axis=1)]
@@ -119,50 +141,73 @@ def build(out_root: Path) -> str:
         cells = "、".join(f"{NAME[r['model']]}={r['failure_rate']:.3f}" for _, r in sub.iterrows())
         L.append(f"- {reg}：{cells}")
     L.append("")
-    L.append("- **HS 在 2008-2009 危机期严重滞后**（违例率 15.7%，接近 3 倍目标）—— regime adaptation 慢的直接证据；GARCH 族同期 6.4%。")
-    L.append("- 2018 尖峰：GJR-t 4.9%、GARCH-t 5.7% 明显优于 HS 10.6% —— GARCH 对波动率突升反应更快。")
-    L.append("- 平静期（2013-2014、2017）各模型接近目标；HS 甚至过度保守（0.2%-1.2%）。")
+    L.append("- 观察 HS 的双向 regime 适应滞后：危机开始违例率过高（风险反应慢），危机结束进入平静期违例率过低（历史危机观测仍滞留在滚动尾部）—— 是 **slow two-sided regime adaptation**，而非单纯危机低估。")
     L.append("")
-    L.append("## 9. NN 是否真正提供增量？")
+    L.append("## 9. DM / bootstrap 结论（Holm 校正，headline 族）")
     L.append("")
-    L.append("- **没有**。DM 检验：M1 vs M3 三 tail p<0.001（favors GARCH-t）；M2 vs M3 三 tail p<0.001（favors 线性）。block bootstrap p 值（0.10-0.15）因尾部损失矩弱而功效不足，但方向一致。")
-    L.append("- M1 vs M5 在 1% tail 显著（DM=-9.87, p<0.001, bootstrap p=0.001）—— GRU 的 1% 预测过度保守。")
-    L.append("- seed robustness：M3/M5 跨种子 failure rate std <= 0.9%、pinball std 小 —— 主 seed 结果有代表性，负结果不是种子运气。")
-    L.append("- 解释：日度 SPY 的条件分位数结构近似可被线性/GARCH 参数化捕捉；1500 日窗口 × 17 特征的样本量对非线性映射的学习收益有限。")
+    head = dm[dm["headline"] == 1]
+    for _, r in head.iterrows():
+        L.append(
+            f"- {NAME[r['model_a']]} vs {NAME[r['model_b']]} @{int(r['tail']*100)}%：DM={r['dm_stat']:.2f} "
+            f"(raw p={r['dm_pvalue']:.4f}, Holm p={r['holm_dm_pvalue']:.4f}, bootstrap p={r['bootstrap_pvalue']:.3f}, favors {r['favors']})"
+        )
     L.append("")
-    L.append("## 10. 哪些结论统计上可靠，哪些只是有限样本迹象")
+    L.append("- 修正后 GJR-t（M4）在 1%/5%/10% 均优于 GARCH-t（Holm p 0.071/0.006/0.011）—— leverage 项有真实增量。")
+    L.append("- MLP vs GARCH-t：1%/10% 显著更差（Holm p<0.01），5% 不显著（p=0.33）—— 负结果有 tail 依赖。")
+    L.append("- DM 与 bootstrap 不一致处（如 1% tail 的 M1 vs M3：DM 显著但 bootstrap p=0.10-0.15）如实报告为 inference sensitive to dependence/finite-sample procedure。")
     L.append("")
-    L.append("**可靠**（检验功效充分或方向一致）：")
-    L.append("- GARCH 族在 5%/10% tail 与 HS 的差异（DM p<0.001，2640 日样本）；MLP 落后于线性基线（DM p<0.001）。")
-    L.append("- 危机期 HS 滞后（2008-2009 违例率 15.7% vs 6.4%，样本内 500 日）。")
-    L.append("- 无违例聚集的 GARCH 属性（Ind 检验 p>0.1）。")
+    L.append("## 10. Neural 是否有 absolute incremental value？")
     L.append("")
-    L.append("**有限样本迹象**（功效不足，仅作方向参考）：")
-    L.append("- 1% tail 的 Kupiec/CC 检验（期望违例仅 ~26 个；M1 vs M2 在 1% 的 DM p=0.056）。")
-    L.append("- block bootstrap 对 M1 vs M3 的 p 值（0.10-0.15）—— 尾部损失矩较弱，DM 渐近近似更可靠。")
-    L.append("- M3 在 1% 的校准（0.98%）与 M1/M4 的差异在噪声范围内。")
+    L.append("- **没有绝对增量**：MLP 三 tail pinball 均高于 GARCH 族；1%/10% tail 对 GARCH-t/LinQR 的差异 Holm 显著。")
+    L.append("- 修正后 MLP 与线性差距缩小（5% tail 不显著）：Scheme B 标准化改善了 MLP 训练；joint loss + non-crossing 是方法差异而非完美纯结构控制。")
+    L.append("- GRU：1% tail 严重过度违例（3.6%±0.36%，seed std 最大）—— seed sensitivity 如实报告。")
     L.append("")
-    L.append("## 11. 项目主要局限")
+    L.append("## 11. seed robustness（n_seeds=3：42 primary + 7/2026）")
     L.append("")
-    L.append("- 1% tail 期望违例数少（约 2.6 个/年），单模型覆盖检验功效低。")
-    L.append("- NN 每日重训 300 epochs（early stopping），计算量 10 倍于经典模型；信息增益为负时成本不可忽视。")
-    L.append("- rv5/bv 为日度聚合，未利用日内路径；jump 代理基于 rv5-bv 的简单差。")
-    L.append("- 2018 年数据仅至 6 月，spike regime 样本短。")
-    L.append("- 单一资产（SPY ETF）；结论外推到个股/其他市场需谨慎。")
+    L.append("| 模型 | tail | failure mean ± std | pinball mean ± std |")
+    L.append("|---|---|---|---|")
+    for _, r in pd.read_csv(run_dir / "tables" / "seed_robustness_summary.csv").iterrows():
+        L.append(
+            f"| {NAME[r['model']]} | {int(r['tail']*100)}% | {r['failure_rate_mean']:.4f} ± {r['failure_rate_std']:.4f} | "
+            f"{r['pinball_mean']:.5f} ± {r['pinball_std']:.5f} |"
+        )
     L.append("")
-    L.append("## 12. 下一步最值得做的事")
+    L.append("## 12. 假设评级（H1-H7，修正后冻结证据）")
     L.append("")
-    L.append("1. **GARCH-X / realized GARCH**：把 log(rv5) 作为外生变量加入波动率方程（Hansen et al. 2012），检验 RV 信息在参数化框架内的增量（我们仅在线性/非线性分位数回归中检验了 RV）。")
-    L.append("2. **CAViaR / 半参数动态分位数**：Engle-Manganelli 框架直接建模分位数过程，比较参数化波动率 vs 直接分位数路线。")
-    L.append("3. **多资产扩展**：在更多 ETF/个股上验证 GARCH 族占优与 NN 负结果是否稳健。")
-    L.append("4. **更好的 NN 正则**：若坚持神经网络路线，用 walk-forward 重训练 + 更大样本（更长历史或多资产池）再评估。")
-    L.append("5. **expectile / ES 联合预测**：VaR 之外扩展到期望短缺（ES），与分位数联合建模。")
+    L.append("| 假设 | Verdict | 关键证据 |")
+    L.append("|---|---|---|")
+    L.append("| H1 HS regime adaptation lag | supported | 2008-2009 违例率显著高于目标（HS 明显高于 GARCH 族）；平静期反向过度保守（双向滞后） |")
+    L.append("| H2 GARCH-t 改善 VaR | supported | 三 tail pinball 最低；1% 校准 1.5%（偏保守但远好于 HS 的聚集违例） |")
+    L.append("| H3a RV 增量 | supported | F0→F1 pinball 下降（线性 -4.3%） |")
+    L.append("| H3b BV 条件增量 | unsupported | F1→F2 ≈ 0 |")
+    L.append("| H4 MLP 绝对增量 | unsupported | 三 tail pinball 均高于 GARCH 族；1%/10% Holm 显著更差 |")
+    L.append("| H5 非线性映射价值 | unsupported（5%/10% tail） | MLP vs LinQR：10% Holm p=0.0015 显著更差；1%/5% 不显著 |")
+    L.append("| H6 tail 依赖 | supported | GJR 优势随 tail 变化；MLP 差距 5% 不显著、1%/10% 显著 |")
+    L.append("| H7 jump/downside block 极端 tail 增量 | not identified（描述性） | F3 整块效果很小；无 component identification，不单独归因 jump |")
+    L.append("")
+    L.append("## 13. 哪些结论可靠，哪些只是描述性")
+    L.append("")
+    L.append("**可靠**（检验功效充分）：GARCH 族 sharpness 优势（三 tail pinball 最低）；GJR vs GARCH-t 的 leverage 增量（Holm 校正显著）；HS 违例聚集（Ind p<0.001）；MLP 1%/10% 显著劣于 GARCH-t/LinQR；危机期 HS 滞后。")
+    L.append("")
+    L.append("**描述性/有限样本**：1% tail 各检验功效低（期望违例 ~26 个）；5% tail MLP vs GARCH-t 不显著属于证据不足而非等价；bootstrap 与 DM 不一致处；F3 整块效果的成分归因。")
+    L.append("")
+    L.append("## 14. 项目主要局限")
+    L.append("")
+    L.append("- 1% tail 期望违例少，覆盖检验功效低；单一资产（SPY ETF）；2018 数据仅至 6 月；rv5/bv 为日度聚合。")
+    L.append("- NN 计算成本约为经典模型 10 倍且无绝对增量；GRU 1% tail seed sensitivity。")
+    L.append("- DM vs bootstrap 在极端 tail 结论不一致处只能如实呈现。")
+    L.append("")
+    L.append("## 15. 面试时最值得解释的五个问题")
+    L.append("")
+    L.append("1. **为什么旧 GARCH VaR 错，错多少？** 标准化 Student-t 分位数 = t_ppf × sqrt((ν-2)/ν)；ν=6 时 1% 分位数 -3.14 vs -2.57（约 22% 高估），违例率被系统性压低。")
+    L.append("2. **为什么按 target date 划分 dev/final？** 预测 t+1 的 origin 在 t，观察属于 t+1 的信息集边界；origin 2007-12-31 的预测目标 2008-01-02 属于 final。")
+    L.append("3. **GJR 的 leverage 增量如何被证明？** GJR-t vs GARCH-t 的 DM Holm p<0.01（5%/10%），γ 项捕捉负冲击放大。")
+    L.append("4. **为什么 MLP 负结果可信？** 同信息集 vs 线性（F0-F3 共享）、三种子稳健、Holm 校正的 headline DM、Scheme B 标准化排除初始化干扰。")
+    L.append("5. **冻结门禁怎么防造假？** data/config/code signature + 工作树检查 + effective data path + canonical run 隔离 + 实验签名复用校验。")
     L.append("")
     L.append("---")
-    L.append("生成时间与实验产物对应：`outputs/tables/metrics.csv`、`dm_comparison.csv`、`regime_metrics.csv`、`ablation.csv`、`seed_robustness_summary.csv`；冻结清单 `docs/FREEZE_MANIFEST.md`。")
+    L.append(f"生成时间与实验产物对应：canonical run `{run_dir}`；冻结清单 `docs/FREEZE_MANIFEST.md`；审计记录 `docs/AUDIT_REMEDIATION.md`。")
     return "\n".join(L)
-
-
 def main() -> None:
     out_root = ROOT / "outputs"
     (ROOT / "docs" / "FINAL_SUMMARY_ZH.md").write_text(build(out_root), encoding="utf-8")

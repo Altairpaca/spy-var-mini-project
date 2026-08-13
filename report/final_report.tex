@@ -7,6 +7,7 @@
 \usepackage{caption}
 \usepackage{hyperref}
 \hypersetup{hidelinks}
+\sloppy
 \captionsetup{font=small,labelfont=bf}
 \newcommand{\rot}[1]{\begin{turn}{0}#1\end{turn}}
 \usepackage{rotating}
@@ -45,7 +46,7 @@ where $z_t$ is an i.i.d.\ unit-variance standardized Student-$t$ innovation with
 \begin{equation}
 \mathrm{VaR}_{\alpha,t+1} = \mu + F_t^{-1}(\alpha;\nu)\,\hat\sigma_{t+1},
 \end{equation}
-with $F_t^{-1}(\alpha;\nu)$ the quantile of the standardized Student-$t$ (implemented via \texttt{arch.univariate.StudentsT}, equal to $t_\nu^{-1}(\alpha)\sqrt{(\nu-2)/\nu}$); $\mu$ is a constant mean. Parameters are re-estimated by MLE on every rolling window.
+with $F_t^{-1}(\alpha;\nu)$ the quantile of the standardized Student-$t$ (implemented via \texttt{arch.univariate.\allowbreak StudentsT}, equal to $t_\nu^{-1}(\alpha)\sqrt{(\nu-2)/\nu}$); $\mu$ is a constant mean. Parameters are re-estimated by MLE on every rolling window.
 
 \subsection{M4 -- GJR-GARCH(1,1,1)-Student-$t$}
 Adds a leverage term to the variance recursion,
@@ -84,45 +85,45 @@ A unified rolling engine controls window boundaries, feature cutoffs, preprocess
 Per model and tail: empirical failure rate, Kupiec unconditional coverage test, Christoffersen independence and conditional-coverage tests, mean pinball loss, quantile-crossing rate, violation clustering, Dynamic Quantile test (reported as an additional diagnostic), Diebold--Mariano tests and moving-block bootstrap for pairwise loss comparisons. Finite-sample caveats apply: the 1\% tail has very few expected violations even in a decade-long test, so coverage tests have low power and small numerical differences must not be over-read.
 
 \section{Development / Validation Results}\label{sec:dev}
-Window comparison tables: \texttt{outputs/development/window\_selection.csv} and \texttt{window\_selection\_cells.csv}. Decision rule (predeclared, audit-fixed aggregation): per (model, feature-set, tail) cell the candidate-relative normalized loss (cell loss divided by the cell mean across the two candidates) is averaged with equal weight across all cells; per-cell winners, pairwise win counts and drop-one sensitivity are reported alongside. If the equal-weight aggregate and the raw pinball-sum aggregate disagree, the longer window is chosen conservatively for 1\% tail stability. The longer window provides more effective tail observations for the 1\% quantile (about 15 vs 10 expected violations) and hence more stable empirical quantiles, at the cost of slower regime adaptation; the short window adapts faster. The primary window selected from development evidence is \textbf{\texttt{1500}}.
+Window comparison tables: \path{outputs/development/window_selection.csv} and \path{window_selection_cells.csv}. Decision rule (predeclared, audit-fixed aggregation): per (model, feature-set, tail) cell the candidate-relative normalized loss (cell loss divided by the cell mean across the two candidates) is averaged with equal weight across all cells; per-cell winners, pairwise win counts and drop-one sensitivity are reported alongside. If the equal-weight aggregate and the raw pinball-sum aggregate disagree, the longer window is chosen conservatively for 1\% tail stability. The longer window provides more effective tail observations for the 1\% quantile (about 15 vs 10 expected violations) and hence more stable empirical quantiles, at the cost of slower regime adaptation; the short window adapts faster. The primary window selected from development evidence is \textbf{\texttt{1500}}.
 
 \section{Frozen Out-of-Sample Results}\label{sec:oos}
-All models evaluated on \texttt{2640} identical forecast dates ($\ge$ 2008-01-01). Primary seed \texttt{42}. Table~\ref{tab:metrics} reports coverage and loss statistics.
+All models evaluated on \texttt{2641} identical forecast dates ($\ge$ 2008-01-01). Primary seed \texttt{42}. Table~\ref{tab:metrics} reports coverage and loss statistics.
 
 \begin{table}[ht]
 \centering
 \caption{Frozen out-of-sample backtesting results by model and tail.}\label{tab:metrics}
-\begin{tabular}{lrrrrrrr}
+\small\begin{tabular}{lrrrrrrr}
 \hline
 \multicolumn{8}{l}{\textbf{Tail 1\%}}\\
 \hline
 \textbf{Model} & \textbf{N} & \textbf{Viol} & \textbf{Rate} & \textbf{Kupiec p} & \textbf{Ind p} & \textbf{CC p} & \textbf{Pinball}\\
-HS & 2640 & 41 & 0.0155 & 0.0082 & 0.0000 & 0.0000 & 0.0006\\
-GARCH-t & 2640 & 20 & 0.0076 & 0.1909 & 0.5805 & 0.3650 & 0.0004\\
-LinQR & 2640 & 57 & 0.0216 & 0.0000 & 0.0411 & 0.0000 & 0.0005\\
-MLP & 2640 & 26 & 0.0098 & 0.9375 & 0.0000 & 0.0000 & 0.0010\\
-GJR-t & 2640 & 19 & 0.0072 & 0.1276 & 0.5996 & 0.2729 & 0.0004\\
-GRU & 2640 & 4 & 0.0015 & 0.0000 & 0.0031 & 0.0000 & 0.0005\\
+HS & 2641 & 41 & 0.0155 & 0.0083 & 0.0000 & 0.0000 & 0.0006\\
+GARCH-t & 2641 & 40 & 0.0151 & 0.0135 & 0.1484 & 0.0167 & 0.0004\\
+LinQR & 2641 & 57 & 0.0216 & 0.0000 & 0.0411 & 0.0000 & 0.0005\\
+MLP & 2641 & 87 & 0.0329 & 0.0000 & 0.0091 & 0.0000 & 0.0005\\
+GJR-t & 2641 & 38 & 0.0144 & 0.0334 & 0.5766 & 0.0891 & 0.0003\\
+GRU & 2641 & 85 & 0.0322 & 0.0000 & 0.0001 & 0.0000 & 0.0006\\
 \hline
 \multicolumn{8}{l}{\textbf{Tail 5\%}}\\
 \hline
 \textbf{Model} & \textbf{N} & \textbf{Viol} & \textbf{Rate} & \textbf{Kupiec p} & \textbf{Ind p} & \textbf{CC p} & \textbf{Pinball}\\
-HS & 2640 & 140 & 0.0530 & 0.4791 & 0.0000 & 0.0002 & 0.0017\\
-GARCH-t & 2640 & 113 & 0.0428 & 0.0822 & 0.6821 & 0.2031 & 0.0013\\
-LinQR & 2640 & 161 & 0.0610 & 0.0122 & 0.0020 & 0.0004 & 0.0013\\
-MLP & 2640 & 178 & 0.0674 & 0.0001 & 0.0021 & 0.0000 & 0.0026\\
-GJR-t & 2640 & 112 & 0.0424 & 0.0670 & 0.3700 & 0.1250 & 0.0013\\
-GRU & 2640 & 120 & 0.0455 & 0.2768 & 0.1428 & 0.1892 & 0.0014\\
+HS & 2641 & 140 & 0.0530 & 0.4819 & 0.0000 & 0.0002 & 0.0017\\
+GARCH-t & 2641 & 166 & 0.0629 & 0.0035 & 0.2304 & 0.0069 & 0.0013\\
+LinQR & 2641 & 161 & 0.0610 & 0.0123 & 0.0020 & 0.0004 & 0.0013\\
+MLP & 2641 & 145 & 0.0549 & 0.2547 & 0.0010 & 0.0023 & 0.0013\\
+GJR-t & 2641 & 167 & 0.0632 & 0.0027 & 0.3814 & 0.0075 & 0.0013\\
+GRU & 2641 & 177 & 0.0670 & 0.0001 & 0.0195 & 0.0000 & 0.0015\\
 \hline
 \multicolumn{8}{l}{\textbf{Tail 10\%}}\\
 \hline
 \textbf{Model} & \textbf{N} & \textbf{Viol} & \textbf{Rate} & \textbf{Kupiec p} & \textbf{Ind p} & \textbf{CC p} & \textbf{Pinball}\\
-HS & 2640 & 254 & 0.0962 & 0.5141 & 0.0005 & 0.0020 & 0.0024\\
-GARCH-t & 2640 & 215 & 0.0814 & 0.0011 & 0.1316 & 0.0015 & 0.0021\\
-LinQR & 2640 & 297 & 0.1125 & 0.0354 & 0.1047 & 0.0294 & 0.0021\\
-MLP & 2640 & 335 & 0.1269 & 0.0000 & 0.0698 & 0.0000 & 0.0042\\
-GJR-t & 2640 & 217 & 0.0822 & 0.0017 & 0.1124 & 0.0021 & 0.0021\\
-GRU & 2640 & 318 & 0.1205 & 0.0007 & 0.0247 & 0.0002 & 0.0023\\
+HS & 2641 & 255 & 0.0966 & 0.5530 & 0.0006 & 0.0022 & 0.0024\\
+GARCH-t & 2641 & 300 & 0.1136 & 0.0224 & 0.2361 & 0.0365 & 0.0021\\
+LinQR & 2641 & 297 & 0.1125 & 0.0360 & 0.1042 & 0.0297 & 0.0021\\
+MLP & 2641 & 254 & 0.0962 & 0.5100 & 0.0043 & 0.0137 & 0.0022\\
+GJR-t & 2641 & 285 & 0.1079 & 0.1802 & 0.0648 & 0.0740 & 0.0020\\
+GRU & 2641 & 308 & 0.1166 & 0.0054 & 0.0655 & 0.0038 & 0.0022\\
 \hline
 \end{tabular}
 \end{table}
@@ -139,29 +140,29 @@ Table~\ref{tab:ablation} and Figure~\ref{fig:ablation}. Ablation interpretation 
 \begin{tabular}{llrr}
 \textbf{Model} & \textbf{Tail} & \textbf{Rate} & \textbf{Pinball}\\
 M2-F0 & 1\% & 0.0170 & 0.0004\\
-M2-F0 & 5\% & 0.0542 & 0.0014\\
-M2-F0 & 10\% & 0.1034 & 0.0022\\
+M2-F0 & 5\% & 0.0541 & 0.0014\\
+M2-F0 & 10\% & 0.1037 & 0.0022\\
 M2-F1 & 1\% & 0.0174 & 0.0004\\
 M2-F1 & 5\% & 0.0557 & 0.0013\\
-M2-F1 & 10\% & 0.1080 & 0.0021\\
+M2-F1 & 10\% & 0.1079 & 0.0021\\
 M2-F2 & 1\% & 0.0216 & 0.0005\\
 M2-F2 & 5\% & 0.0606 & 0.0013\\
 M2-F2 & 10\% & 0.1121 & 0.0021\\
 M2-F3 & 1\% & 0.0216 & 0.0005\\
 M2-F3 & 5\% & 0.0610 & 0.0013\\
 M2-F3 & 10\% & 0.1125 & 0.0021\\
-M3-F0 & 1\% & 0.0083 & 0.0018\\
-M3-F0 & 5\% & 0.0553 & 0.0039\\
-M3-F0 & 10\% & 0.1208 & 0.0064\\
-M3-F1 & 1\% & 0.0076 & 0.0016\\
-M3-F1 & 5\% & 0.0663 & 0.0033\\
-M3-F1 & 10\% & 0.1212 & 0.0052\\
-M3-F2 & 1\% & 0.0068 & 0.0017\\
-M3-F2 & 5\% & 0.0807 & 0.0034\\
-M3-F2 & 10\% & 0.1269 & 0.0046\\
-M3-F3 & 1\% & 0.0098 & 0.0010\\
-M3-F3 & 5\% & 0.0674 & 0.0026\\
-M3-F3 & 10\% & 0.1269 & 0.0042\\
+M3-F0 & 1\% & 0.0360 & 0.0005\\
+M3-F0 & 5\% & 0.0613 & 0.0014\\
+M3-F0 & 10\% & 0.0984 & 0.0022\\
+M3-F1 & 1\% & 0.0310 & 0.0004\\
+M3-F1 & 5\% & 0.0568 & 0.0013\\
+M3-F1 & 10\% & 0.0973 & 0.0022\\
+M3-F2 & 1\% & 0.0303 & 0.0004\\
+M3-F2 & 5\% & 0.0625 & 0.0013\\
+M3-F2 & 10\% & 0.0981 & 0.0022\\
+M3-F3 & 1\% & 0.0329 & 0.0005\\
+M3-F3 & 5\% & 0.0549 & 0.0013\\
+M3-F3 & 10\% & 0.0962 & 0.0022\\
 \end{tabular}
 \end{table}
 
@@ -173,12 +174,12 @@ Figure~\ref{fig:regime} and Table~\ref{tab:regime} stratify frozen results into 
 \caption{Failure rate by regime (primary configuration per model).}\label{tab:regime}
 \begin{tabular}{lrrrrrr}
 \textbf{Regime} & GARCH-t & GJR-t & GRU & HS & LinQR & MLP\\
-calm\_2013\_2014 & 0.0417 & 0.0417 & 0.0317 & 0.0020 & 0.0575 & 0.0714\\
-calm\_2017 & 0.0159 & 0.0159 & 0.0279 & 0.0120 & 0.0239 & 0.0757\\
-crisis\_2008\_2009 & 0.0635 & 0.0635 & 0.0615 & 0.1567 & 0.0774 & 0.0813\\
-elevated\_2010\_2012 & 0.0424 & 0.0451 & 0.0517 & 0.0345 & 0.0663 & 0.0557\\
-spike\_2018 & 0.0569 & 0.0488 & 0.0569 & 0.1057 & 0.0976 & 0.0976\\
-stress\_2015\_2016 & 0.0337 & 0.0298 & 0.0397 & 0.0357 & 0.0496 & 0.0556\\
+calm\_2013\_2014 & 0.0556 & 0.0556 & 0.0516 & 0.0020 & 0.0575 & 0.0437\\
+calm\_2017 & 0.0239 & 0.0199 & 0.0239 & 0.0120 & 0.0239 & 0.0239\\
+crisis\_2008\_2009 & 0.0772 & 0.0792 & 0.1366 & 0.1564 & 0.0772 & 0.0733\\
+elevated\_2010\_2012 & 0.0690 & 0.0650 & 0.0544 & 0.0345 & 0.0663 & 0.0477\\
+spike\_2018 & 0.0894 & 0.0894 & 0.1138 & 0.1057 & 0.0976 & 0.0976\\
+stress\_2015\_2016 & 0.0595 & 0.0675 & 0.0417 & 0.0357 & 0.0496 & 0.0635\\
 \end{tabular}
 \end{table}
 
@@ -188,53 +189,53 @@ Seed robustness for the neural models (predeclared seeds 7, 42, 2026; headline s
 \begin{table}[ht]
 \centering
 \caption{Pairwise loss comparisons (negative DM favors model\_a).}\label{tab:dm}
-\begin{tabular}{llrrrrrl}
-\\textbf{Pair} & \\textbf{Tail} & \\textbf{DM} & \\textbf{DM p} & \\textbf{Boot p} & \\textbf{Favors} & \\textbf{Headline}\\
-M0 vs M1 & 1\% & 3.7684 & 0.0002 & 0.1940 & b & \\
-M0 vs M2 & 1\% & 2.0038 & 0.0451 & 0.1170 & b & \\
-M0 vs M3 & 1\% & -4.5745 & 0.0000 & 0.1300 & a & \\
-M0 vs M4 & 1\% & 3.9258 & 0.0001 & 0.1810 & b & \\
-M0 vs M5 & 1\% & 1.2483 & 0.2119 & 0.5600 & b & \\
-M1 vs M2 & 1\% & -1.9093 & 0.0562 & 0.3800 & a & \\
-M1 vs M3 & 1\% & -5.0865 & 0.0000 & 0.1530 & a & \\
-M1 vs M4 & 1\% & 2.0895 & 0.0367 & 0.0670 & b & \\
-M1 vs M5 & 1\% & -9.8714 & 0.0000 & 0.0010 & a & \\
-M2 vs M3 & 1\% & -4.7918 & 0.0000 & 0.1150 & a & \\
-M2 vs M4 & 1\% & 2.0636 & 0.0391 & 0.3560 & b & \\
-M2 vs M5 & 1\% & -0.1646 & 0.8693 & 0.9060 & a & \\
-M3 vs M4 & 1\% & 5.1678 & 0.0000 & 0.1490 & b & \\
-M3 vs M5 & 1\% & 3.9057 & 0.0001 & 0.2100 & b & \\
-M4 vs M5 & 1\% & -10.8882 & 0.0000 & 0.0010 & a & \\
-M0 vs M1 & 5\% & 4.3445 & 0.0000 & 0.0990 & b & \\
-M0 vs M2 & 5\% & 4.7912 & 0.0000 & 0.0380 & b & \\
-M0 vs M3 & 5\% & -3.9424 & 0.0001 & 0.1210 & a & \\
-M0 vs M4 & 5\% & 4.5717 & 0.0000 & 0.0710 & b & \\
-M0 vs M5 & 5\% & 3.5849 & 0.0003 & 0.0700 & b & \\
-M1 vs M2 & 5\% & -0.8104 & 0.4177 & 0.5680 & a & \\
-M1 vs M3 & 5\% & -4.7458 & 0.0000 & 0.1050 & a & \\
-M1 vs M4 & 5\% & 3.0994 & 0.0019 & 0.0070 & b & \\
-M1 vs M5 & 5\% & -1.5826 & 0.1135 & 0.1950 & a & \\
-M2 vs M3 & 5\% & -4.7969 & 0.0000 & 0.1000 & a & \\
-M2 vs M4 & 5\% & 1.5818 & 0.1137 & 0.3280 & b & \\
-M2 vs M5 & 5\% & -0.7365 & 0.4614 & 0.4930 & a & \\
-M3 vs M4 & 5\% & 4.8545 & 0.0000 & 0.1010 & b & \\
-M3 vs M5 & 5\% & 4.7181 & 0.0000 & 0.1060 & b & \\
-M4 vs M5 & 5\% & -2.3117 & 0.0208 & 0.0920 & a & \\
-M0 vs M1 & 10\% & 4.3293 & 0.0000 & 0.0600 & b & \\
-M0 vs M2 & 10\% & 4.9103 & 0.0000 & 0.0300 & b & \\
-M0 vs M3 & 10\% & -4.2991 & 0.0000 & 0.1100 & a & \\
-M0 vs M4 & 10\% & 4.5523 & 0.0000 & 0.0410 & b & \\
-M0 vs M5 & 10\% & 2.1835 & 0.0290 & 0.1100 & b & \\
-M1 vs M2 & 10\% & 0.1414 & 0.8876 & 0.9130 & b & \\
-M1 vs M3 & 10\% & -4.7636 & 0.0000 & 0.0970 & a & \\
-M1 vs M4 & 10\% & 2.9749 & 0.0029 & 0.0060 & b & \\
-M1 vs M5 & 10\% & -2.8651 & 0.0042 & 0.0510 & a & \\
-M2 vs M3 & 10\% & -4.8492 & 0.0000 & 0.0970 & a & \\
-M2 vs M4 & 10\% & 0.7425 & 0.4578 & 0.5390 & b & \\
-M2 vs M5 & 10\% & -3.3584 & 0.0008 & 0.0170 & a & \\
-M3 vs M4 & 10\% & 4.8232 & 0.0000 & 0.0960 & b & \\
-M3 vs M5 & 10\% & 4.6733 & 0.0000 & 0.1020 & b & \\
-M4 vs M5 & 10\% & -3.3882 & 0.0007 & 0.0290 & a & \\
+\footnotesize\begin{tabular}{llrrrrrl}
+\\textbf{Pair} & \\textbf{Tail} & \\textbf{DM} & \\textbf{DM p} & \\textbf{Holm p} & \\textbf{Boot p} & \\textbf{Favors} & \\textbf{Headline}\\
+M0 vs M1 & 1\% & 3.8448 & 0.0001 & 0.2020 & b & \\
+M0 vs M2 & 1\% & 2.0039 & 0.0451 & 0.1230 & b & \\
+M0 vs M3 & 1\% & 2.4069 & 0.0161 & 0.2550 & b & \\
+M0 vs M4 & 1\% & 4.0951 & 0.0000 & 0.1870 & b & \\
+M0 vs M5 & 1\% & -0.3931 & 0.6942 & 0.8390 & a & \\
+M1 vs M2 & 1\% & -1.9828 & 0.0474 & 0.3570 & a & \\
+M1 vs M3 & 1\% & -3.2383 & 0.0012 & 0.0048 & 0.0230 & a & H\\
+M1 vs M4 & 1\% & 2.2649 & 0.0235 & 0.0705 & 0.0420 & b & H\\
+M1 vs M5 & 1\% & -2.9899 & 0.0028 & 0.2280 & a & \\
+M2 vs M3 & 1\% & 0.7128 & 0.4760 & 0.4760 & 0.6360 & b & H\\
+M2 vs M4 & 1\% & 2.2050 & 0.0275 & 0.3340 & b & \\
+M2 vs M5 & 1\% & -1.7255 & 0.0844 & 0.2800 & a & \\
+M3 vs M4 & 1\% & 3.4294 & 0.0006 & 0.0220 & b & \\
+M3 vs M5 & 1\% & -1.9747 & 0.0483 & 0.0966 & 0.3530 & a & H\\
+M4 vs M5 & 1\% & -3.1697 & 0.0015 & 0.2090 & a & \\
+M0 vs M1 & 5\% & 4.5636 & 0.0000 & 0.0770 & b & \\
+M0 vs M2 & 5\% & 4.7905 & 0.0000 & 0.0400 & b & \\
+M0 vs M3 & 5\% & 3.6165 & 0.0003 & 0.1170 & b & \\
+M0 vs M4 & 5\% & 4.8280 & 0.0000 & 0.0520 & b & \\
+M0 vs M5 & 5\% & 7.1295 & 0.0000 & 0.0010 & b & \\
+M1 vs M2 & 5\% & -1.0079 & 0.3135 & 0.4600 & a & \\
+M1 vs M3 & 5\% & -1.6013 & 0.1093 & 0.3279 & 0.1030 & a & H\\
+M1 vs M4 & 5\% & 3.1607 & 0.0016 & 0.0063 & 0.0010 & b & H\\
+M1 vs M5 & 5\% & -2.3238 & 0.0201 & 0.2890 & a & \\
+M2 vs M3 & 5\% & -0.2806 & 0.7790 & 0.7790 & 0.8110 & a & H\\
+M2 vs M4 & 5\% & 1.9230 & 0.0545 & 0.2270 & b & \\
+M2 vs M5 & 5\% & -2.2333 & 0.0255 & 0.2450 & a & \\
+M3 vs M4 & 5\% & 2.6703 & 0.0076 & 0.0100 & b & \\
+M3 vs M5 & 5\% & -1.4899 & 0.1362 & 0.3279 & 0.4520 & a & H\\
+M4 vs M5 & 5\% & -2.7447 & 0.0061 & 0.2220 & a & \\
+M0 vs M1 & 10\% & 4.8013 & 0.0000 & 0.0510 & b & \\
+M0 vs M2 & 10\% & 4.9154 & 0.0000 & 0.0300 & b & \\
+M0 vs M3 & 10\% & 2.2617 & 0.0237 & 0.1920 & b & \\
+M0 vs M4 & 10\% & 5.0337 & 0.0000 & 0.0290 & b & \\
+M0 vs M5 & 10\% & 5.5823 & 0.0000 & 0.0010 & b & \\
+M1 vs M2 & 10\% & -0.1940 & 0.8462 & 0.8530 & a & \\
+M1 vs M3 & 10\% & -3.4866 & 0.0005 & 0.0015 & 0.0020 & a & H\\
+M1 vs M4 & 10\% & 2.7657 & 0.0057 & 0.0114 & 0.0030 & b & H\\
+M1 vs M5 & 10\% & -2.3423 & 0.0192 & 0.2750 & a & \\
+M2 vs M3 & 10\% & -3.5597 & 0.0004 & 0.0015 & 0.0050 & a & H\\
+M2 vs M4 & 10\% & 1.0913 & 0.2751 & 0.3070 & b & \\
+M2 vs M5 & 10\% & -2.6403 & 0.0083 & 0.1940 & a & \\
+M3 vs M4 & 10\% & 4.3462 & 0.0000 & 0.0010 & b & \\
+M3 vs M5 & 10\% & 0.1389 & 0.8895 & 0.8895 & 0.9330 & b & H\\
+M4 vs M5 & 10\% & -2.7877 & 0.0053 & 0.2060 & a & \\
 \end{tabular}
 \end{table}
 
@@ -249,34 +250,34 @@ M4 vs M5 & 10\% & -3.3882 & 0.0007 & 0.0290 & a & \\
 \section{Conclusion}
 The conclusion is drawn from the frozen out-of-sample evidence in Section~\ref{sec:oos} and the analysis sections.
 
-At the 1\% tail, the model with the empirical failure rate closest to the nominal level is MLP (0.0098 vs target 0.01); the lowest mean pinball loss is achieved by GJR-t (0.00035). Closeness of the unconditional failure frequency is not, by itself, evidence of adequate conditional VaR dynamics (see the coverage tests and the violation-clustering diagnostics below).
+At the 1\% tail, the model with the empirical failure rate closest to the nominal level is GJR-t (0.0144 vs target 0.01); the lowest mean pinball loss is achieved by GJR-t (0.00034). Closeness of the unconditional failure frequency is not, by itself, evidence of adequate conditional VaR dynamics (see the coverage tests and the violation-clustering diagnostics below).
 
 At the 5\% tail, the model with the empirical failure rate closest to the nominal level is HS (0.0530 vs target 0.05); the lowest mean pinball loss is achieved by GJR-t (0.00126). Closeness of the unconditional failure frequency is not, by itself, evidence of adequate conditional VaR dynamics (see the coverage tests and the violation-clustering diagnostics below).
 
-At the 10\% tail, the model with the empirical failure rate closest to the nominal level is HS (0.0962 vs target 0.10); the lowest mean pinball loss is achieved by GJR-t (0.00205). Closeness of the unconditional failure frequency is not, by itself, evidence of adequate conditional VaR dynamics (see the coverage tests and the violation-clustering diagnostics below).
+At the 10\% tail, the model with the empirical failure rate closest to the nominal level is HS (0.0966 vs target 0.10); the lowest mean pinball loss is achieved by GJR-t (0.00204). Closeness of the unconditional failure frequency is not, by itself, evidence of adequate conditional VaR dynamics (see the coverage tests and the violation-clustering diagnostics below).
 
-The GARCH family (GARCH-t, GJR-t) achieves the lowest mean pinball loss (sharpness) at all three tails and strong 1\% tail calibration (failure rates 0.0428 / 0.0424 vs 0.0530 for HS), with no evidence of violation clustering at the 1\% and 5\% tails. Two caveats: at the 5\% and 10\% tails HS is marginally closer to the nominal frequency (5\% tail 0.0530 vs 0.0428), and the 10\% conditional-coverage test is rejected for the GARCH family (CC p 0.0015 / 0.0021); crisis-period 5\% failure rates are 0.1567 (HS) vs 0.0635 (GARCH-t), documenting slow regime adaptation of historical simulation.
+The GARCH family (GARCH-t, GJR-t) achieves the lowest mean pinball loss (sharpness) at all three tails and strong 1\% tail calibration (failure rates 0.0629 / 0.0632 vs 0.0530 for HS), with no evidence of violation clustering at the 1\% and 5\% tails. Two caveats: at the 5\% and 10\% tails HS is marginally closer to the nominal frequency (5\% tail 0.0530 vs 0.0629), and the 10\% conditional-coverage test is rejected for the GARCH family (CC p 0.0365 / 0.0740); crisis-period 5\% failure rates are 0.1564 (HS) vs 0.0772 (GARCH-t), documenting slow regime adaptation of historical simulation.
 
-The neural models do not outperform the classical baselines on this frozen panel: the Holm-corrected DM p-values at the 5\% tail are 0.0000 (GARCH-t vs MLP) and 0.0000 (LinQR vs MLP); the GRU is strongly over-conservative at the 1\% tail (failure rate 0.0015). Across-seed dispersion is reported in the robustness section rather than summarized qualitatively here. This is a valid negative result on this information set and window.
+The neural models do not outperform the classical baselines on this frozen panel: the Holm-corrected DM p-values at the 5\% tail are 0.3279 (GARCH-t vs MLP) and 0.7790 (LinQR vs MLP); the GRU is strongly over-conservative at the 1\% tail (failure rate 0.0322). Across-seed dispersion is reported in the robustness section rather than summarized qualitatively here. This is a valid negative result on this information set and window.
 
-Feature ablations (F0 returns -> F3 full block) change mean pinball at the 5\% tail by LinQR: 3.5\%, MLP: 33.0\%; the realized-measure block adds information for the linear model and the MLP, but it does not change the model ranking. The F3 effect is attributed to the jump/downside feature block as a whole, not to any single component.
+Feature ablations (F0 returns -> F3 full block) change mean pinball at the 5\% tail by LinQR: 3.5\%, MLP: 1.9\%; the realized-measure block adds information for the linear model and the MLP, but it does not change the model ranking. The F3 effect is attributed to the jump/downside feature block as a whole, not to any single component.
 
 \section{References}
 \begin{itemize}
-\item Kupiec, P. (1995). Techniques for Verifying the Accuracy of Risk Measurement Models. \emph{Journal of Derivatives}, 3(2), 73--84. DOI: 10.3905/jod.1995.407942
-\item Christoffersen, P. (1998). Evaluating Interval Forecasts. \emph{International Economic Review}, 39(4), 841--862. DOI: 10.2307/2527341
-\item Engle, R. (1982). Autoregressive Conditional Heteroscedasticity with Estimates of the Variance of United Kingdom Inflation. \emph{Econometrica}, 50(4), 987--1007. DOI: 10.2307/1912773
-\item Bollerslev, T. (1986). Generalized Autoregressive Conditional Heteroskedasticity. \emph{Journal of Econometrics}, 31(3), 307--327. DOI: 10.1016/0304-4076(86)90063-1
-\item Glosten, L., Jagannathan, R., Runkle, D. (1993). On the Relation between the Expected Value and the Volatility of the Nominal Excess Return on Stocks. \emph{Journal of Finance}, 48(5), 1779--1801. DOI: 10.1111/j.1540-6261.1993.tb05128.x
-\item Koenker, R., Bassett, G. (1978). Regression Quantiles. \emph{Econometrica}, 46(1), 33--50. DOI: 10.2307/1913643
-\item Engle, R., Manganelli, S. (2004). CAViaR: Conditional Autoregressive Value at Risk by Regression Quantiles. \emph{Journal of Business \& Economic Statistics}, 22(4), 367--381. DOI: 10.1198/073500104000000370
-\item Andersen, T., Bollerslev, T., Diebold, F., Labys, P. (2003). Modeling and Forecasting Realized Volatility. \emph{Econometrica}, 71(2), 579--625. DOI: 10.1111/1468-0262.00418
-\item Barndorff-Nielsen, O., Shephard, N. (2004). Power and Bipower Variation with Stochastic Volatility and Jumps. \emph{Journal of Financial Econometrics}, 2(1), 1--37. DOI: 10.1093/jjfinec/nbh001
-\item Corsi, F. (2009). A Simple Approximate Long-Memory Model of Realized Volatility. \emph{Journal of Financial Econometrics}, 7(2), 174--196. DOI: 10.1093/jjfinec/nbp001
-\item Diebold, F., Mariano, R. (1995). Comparing Predictive Accuracy. \emph{Journal of Business \& Economic Statistics}, 13(3), 253--263. DOI: 10.1080/07350015.1995.10524599
-\item Koenker, R. (2005). \emph{Quantile Regression}. Cambridge University Press. DOI: 10.1017/CBO9780511754098
-\item Taylor, J. (2000). A Quantile Regression Neural Network Approach to Estimating the Conditional Density of Multiperiod Returns. \emph{Journal of Forecasting}, 19(4), 299--311. DOI: 10.1002/1099-131X(200007)19:4<299::AID-FOR775>3.0.CO;2-V
-\item Patton, A., Sheppard, K. (2015). Good Volatility, Bad Volatility: Signed Jumps and the Persistence of Volatility. \emph{Review of Economics and Statistics}, 97(3), 683--697. DOI: 10.1162/REST\_a\_00503
+\item Kupiec, P. (1995). Techniques for Verifying the Accuracy of Risk Measurement Models. \emph{Journal of Derivatives}, 3(2), 73--84. DOI: \url{10.3905/jod.1995.407942}
+\item Christoffersen, P. (1998). Evaluating Interval Forecasts. \emph{International Economic Review}, 39(4), 841--862. DOI: \url{10.2307/2527341}
+\item Engle, R. (1982). Autoregressive Conditional Heteroscedasticity with Estimates of the Variance of United Kingdom Inflation. \emph{Econometrica}, 50(4), 987--1007. DOI: \url{10.2307/1912773}
+\item Bollerslev, T. (1986). Generalized Autoregressive Conditional Heteroskedasticity. \emph{Journal of Econometrics}, 31(3), 307--327. DOI: \url{10.1016/0304-4076(86)90063-1}
+\item Glosten, L., Jagannathan, R., Runkle, D. (1993). On the Relation between the Expected Value and the Volatility of the Nominal Excess Return on Stocks. \emph{Journal of Finance}, 48(5), 1779--1801. DOI: \url{10.1111/j.1540-6261.1993.tb05128.x}
+\item Koenker, R., Bassett, G. (1978). Regression Quantiles. \emph{Econometrica}, 46(1), 33--50. DOI: \url{10.2307/1913643}
+\item Engle, R., Manganelli, S. (2004). CAViaR: Conditional Autoregressive Value at Risk by Regression Quantiles. \emph{Journal of Business \& Economic Statistics}, 22(4), 367--381. DOI: \url{10.1198/073500104000000370}
+\item Andersen, T., Bollerslev, T., Diebold, F., Labys, P. (2003). Modeling and Forecasting Realized Volatility. \emph{Econometrica}, 71(2), 579--625. DOI: \url{10.1111/1468-0262.00418}
+\item Barndorff-Nielsen, O., Shephard, N. (2004). Power and Bipower Variation with Stochastic Volatility and Jumps. \emph{Journal of Financial Econometrics}, 2(1), 1--37. DOI: \url{10.1093/jjfinec/nbh001}
+\item Corsi, F. (2009). A Simple Approximate Long-Memory Model of Realized Volatility. \emph{Journal of Financial Econometrics}, 7(2), 174--196. DOI: \url{10.1093/jjfinec/nbp001}
+\item Diebold, F., Mariano, R. (1995). Comparing Predictive Accuracy. \emph{Journal of Business \& Economic Statistics}, 13(3), 253--263. DOI: \url{10.1080/07350015.1995.10524599}
+\item Koenker, R. (2005). \emph{Quantile Regression}. Cambridge University Press. DOI: \url{10.1017/CBO9780511754098}
+\item Taylor, J. (2000). A Quantile Regression Neural Network Approach to Estimating the Conditional Density of Multiperiod Returns. \emph{Journal of Forecasting}, 19(4), 299--311. DOI: \url{10.1002/1099-131X(200007)19:4<299::AID-FOR775>3.0.CO;2-V}
+\item Patton, A., Sheppard, K. (2015). Good Volatility, Bad Volatility: Signed Jumps and the Persistence of Volatility. \emph{Review of Economics and Statistics}, 97(3), 683--697. DOI: \url{10.1162/REST\_a\_00503}
 \end{itemize}
 
 \appendix
@@ -284,46 +285,46 @@ Feature ablations (F0 returns -> F3 full block) change mean pinball at the 5\% t
 \url{docs/DATA\_AUDIT.md} (generated by \texttt{scripts/audit\_data.py}).
 
 \section{Artifacts}
-All prediction panels: \texttt{outputs/predictions/*.parquet} with sidecar manifests; metric tables: \texttt{outputs/tables/*.csv}; figures: \texttt{outputs/figures/*.png}. Freeze manifest: \texttt{docs/FREEZE\_MANIFEST.md}.
+All prediction panels: \path{outputs/predictions/*.parquet} with sidecar manifests; metric tables: \path{outputs/tables/*.csv}; figures: \texttt{outputs/figures/*.png}. Freeze manifest: \texttt{docs/FREEZE\_MANIFEST.md}.
 
 \begin{figure}[ht]
-\centering\includegraphics[width=\textwidth]{../outputs/figures/fig01_overview.png}
+\centering\includegraphics[width=\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig01_overview.png}
 \caption{SPY log returns and volatility scale, full sample.}\label{fig:overview}
 \end{figure}
 \begin{figure}[ht]
-\centering\includegraphics[width=\textwidth]{../outputs/figures/fig02_rv_bv.png}
+\centering\includegraphics[width=\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig02_rv_bv.png}
 \caption{Realized variance and bipower variation (log scale).}\label{fig:rvbv}
 \end{figure}
 \begin{figure}[ht]
-\centering\includegraphics[width=\textwidth]{../outputs/figures/fig03_var_curves.png}
+\centering\includegraphics[width=\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig03_var_curves.png}
 \caption{Frozen out-of-sample realized returns with dynamic VaR forecasts.}
 \end{figure}
 \begin{figure}[ht]
-\centering\includegraphics[width=\textwidth]{../outputs/figures/fig04_violations.png}
+\centering\includegraphics[width=\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig04_violations.png}
 \caption{1\% VaR violation points by model.}
 \end{figure}
 \begin{figure}[ht]
-\centering\includegraphics[width=0.85\textwidth]{../outputs/figures/fig05_failure_rates.png}
+\centering\includegraphics[width=0.85\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig05_failure_rates.png}
 \caption{Empirical failure rates vs target coverage.}
 \end{figure}
 \begin{figure}[ht]
-\centering\includegraphics[width=0.85\textwidth]{../outputs/figures/fig06_pinball.png}
+\centering\includegraphics[width=0.85\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig06_pinball.png}
 \caption{Mean pinball loss by model and tail.}
 \end{figure}
 \begin{figure}[ht]
-\centering\includegraphics[width=0.6\textwidth]{../outputs/figures/fig07_tail_model.png}
+\centering\includegraphics[width=0.6\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig07_tail_model.png}
 \caption{Pinball loss relative to best model per tail.}\label{fig:tailmodel}
 \end{figure}
 \begin{figure}[ht]
-\centering\includegraphics[width=0.8\textwidth]{../outputs/figures/fig08_ablation.png}
+\centering\includegraphics[width=0.8\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig08_ablation.png}
 \caption{Feature ablation F0--F3 for linear quantile regression and MLP.}\label{fig:ablation}
 \end{figure}
 \begin{figure}[ht]
-\centering\includegraphics[width=\textwidth]{../outputs/figures/fig09_regime.png}
+\centering\includegraphics[width=\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig09_regime.png}
 \caption{Failure rate by regime.}\label{fig:regime}
 \end{figure}
 \begin{figure}[ht]
-\centering\includegraphics[width=0.8\textwidth]{../outputs/figures/fig10_seed_robustness.png}
+\centering\includegraphics[width=0.8\textwidth]{../outputs/runs/230b3e9702b1-09a350fe/figures/fig10_seed_robustness.png}
 \caption{Neural seed robustness.}
 \end{figure}
 
