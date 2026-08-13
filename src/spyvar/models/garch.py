@@ -5,7 +5,13 @@ M4: GJR-GARCH(1,1,1)-Student-t（leverage/downside asymmetry 检验）
 M1_gauss: GARCH(1,1)-Normal（诊断参考）
 
 每日按滚动窗口重新拟合，一步预测：
-VaR_alpha = mu + t_ppf(alpha, nu) * sigma_{t+1|t}
+VaR_alpha = mu + F_t^{-1}(alpha) * sigma_{t+1|t}
+其中 F_t 为 arch 的单位方差标准化 Student-t 分布（innovation 方差为 1），
+分位数用 arch.univariate.StudentsT().ppf 计算；等价形式为
+scipy.stats.t.ppf(alpha, nu) * sqrt((nu-2)/nu)。
+审计修复（2026-08-13）：旧实现直接使用未标准化 scipy.stats.t.ppf，
+导致 VaR 尺度偏大约 sqrt(nu/(nu-2))（nu=6 时约 22%），全部旧 GARCH 族
+final 结果已宣布 INVALIDATED BY AUDIT。
 非收敛、NaN、异常一律写入 fit_status，绝不静默。
 """
 
@@ -13,6 +19,7 @@ from __future__ import annotations
 
 import numpy as np
 from arch import arch_model
+from arch.univariate import StudentsT
 from scipy import stats
 
 from ..rolling import Model, QuantileForecast, WindowData
@@ -53,7 +60,9 @@ class GARCHFamily(Model):
         mu = float(res.params["mu"]) / scale
         if self._dist in ("t", "students-t"):
             nu = float(res.params["nu"])
-            q = mu + sigma * stats.t.ppf([0.01, 0.05, 0.10], nu)
+            # 审计修复：arch 的 Student-t innovation 是单位方差标准化分布，
+            # 分位数必须用 StudentsT().ppf（等价于 scipy t 分位数乘 sqrt((nu-2)/nu)）
+            q = mu + sigma * StudentsT().ppf([0.01, 0.05, 0.10], nu)
         else:
             q = mu + sigma * stats.norm.ppf([0.01, 0.05, 0.10])
         if not np.isfinite(q).all() or not np.isfinite(sigma):
