@@ -69,6 +69,9 @@ def holm_adjust(pvals: np.ndarray) -> np.ndarray:
 
 
 def load_final_panels(out_root: Path) -> pd.DataFrame:
+    from scripts.common import canonical_run_dir
+
+    out_root = canonical_run_dir(out_root)
     pred_dir = out_root / "predictions"
     frames = []
     for p in sorted(pred_dir.glob("final-*.parquet")):
@@ -81,6 +84,9 @@ def load_final_panels(out_root: Path) -> pd.DataFrame:
 
 
 def load_robustness_panels(out_root: Path) -> pd.DataFrame:
+    from scripts.common import canonical_run_dir
+
+    out_root = canonical_run_dir(out_root)
     pred_dir = out_root / "predictions"
     frames = [pd.read_parquet(p) for p in sorted(pred_dir.glob("rob-*.parquet"))]
     return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
@@ -139,9 +145,11 @@ def _metric_row(g: pd.DataFrame, alpha: float, model: str, fset: str, exp_id: st
 
 
 def main() -> None:
+    from scripts.common import canonical_run_dir
+
     args = parse_common_args("统一评估")
     cfg = resolve_config(args)
-    out_root = Path(args.out_root)
+    out_root = canonical_run_dir(Path(args.out_root))
     (out_root / "tables").mkdir(parents=True, exist_ok=True)
     panels = load_final_panels(out_root)
     check = common_panel_check(panels)

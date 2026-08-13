@@ -42,6 +42,9 @@ MODEL_LABELS = {
 
 
 def _load_panels(out_root: Path) -> pd.DataFrame:
+    from scripts.common import canonical_run_dir
+
+    out_root = canonical_run_dir(out_root)
     frames = [pd.read_parquet(p) for p in sorted((out_root / "predictions").glob("final-*.parquet"))]
     return pd.concat(frames, ignore_index=True)
 
@@ -255,7 +258,9 @@ def fig10_seed_robustness(rob_panels: pd.DataFrame, out: Path, cfg) -> None:
 def main() -> None:
     args = parse_common_args("论文级图表")
     cfg = resolve_config(args)
-    out_root = Path(args.out_root)
+    from scripts.common import canonical_run_dir
+
+    out_root = canonical_run_dir(Path(args.out_root))
     figs = out_root / "figures"
     figs.mkdir(parents=True, exist_ok=True)
 

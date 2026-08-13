@@ -91,20 +91,20 @@ def main() -> None:
     w1, w2 = windows
     mean_norm = cell_df[[f"norm_w{w1}", f"norm_w{w2}"]].mean()
     win_counts = cell_df["winner"].value_counts().to_dict()
-    chosen_raw = mean_norm.idxmin().replace("norm_w", "")
+    chosen_raw = int(mean_norm.idxmin().split("_w")[-1])
     # sensitivity: drop-one-cell winner distribution
     sens = {}
     for i in range(len(cell_df)):
         sub = cell_df.drop(index=i)
         m = sub[[f"norm_w{w1}", f"norm_w{w2}"]].mean()
-        sens[i] = int(m.idxmin().replace("norm_w", ""))
+        sens[i] = int(m.idxmin().split("_w")[-1])
     sens_counts = pd.Series(sens).value_counts().to_dict()
 
     # conservative choice on disagreement: longer window (more 1% tail samples)
     raw_sum = tbl.groupby("window")["mean_pinball"].sum()
     raw_winner = int(raw_sum.idxmin())
-    disagreement = raw_winner != int(chosen_raw)
-    chosen = int(chosen_raw)
+    disagreement = raw_winner != chosen_raw
+    chosen = chosen_raw
     if disagreement:
         chosen = max(w1, w2)
         note = ("aggregations disagree; conservative choice (longer window) taken "
@@ -112,8 +112,8 @@ def main() -> None:
     else:
         note = "aggregations agree"
     decision = {
-        "candidates": [w1, w2],
-        "mean_normalized_loss": {int(k): float(v) for k, v in mean_norm.items()},
+        "candidates": [int(w1), int(w2)],
+        "mean_normalized_loss": {int(k.split("_w")[-1]): float(v) for k, v in mean_norm.items()},
         "cell_win_counts": {int(k): int(v) for k, v in win_counts.items()},
         "sensitivity_win_counts": {int(k): int(v) for k, v in sens_counts.items()},
         "raw_pinball_sum_winner": int(raw_winner),
