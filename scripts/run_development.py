@@ -56,9 +56,6 @@ def main() -> None:
         for model_id, fset in DEV_MODELS:
             exp_id = f"dev-{model_id}-{fset}-w{window}"
             out_path = out_root / "predictions" / f"{exp_id}.parquet"
-            if out_path.exists():
-                print(f"  跳过（已存在）: {exp_id}")
-                continue
             panel = run_experiment(
                 cfg, df, model_id=model_id, feature_set=fset, window=window,
                 seed=cfg.primary_seed, origins=origins, out_path=str(out_path),

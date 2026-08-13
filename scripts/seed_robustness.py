@@ -44,9 +44,6 @@ def main() -> None:
                 continue
             exp_id = f"rob-{model_id}-{fset}-w{cfg.primary_window}-s{seed}"
             out_path = out_root / "predictions" / f"{exp_id}.parquet"
-            if out_path.exists():
-                print(f"  跳过（已存在）: {exp_id}")
-                continue
             panel = run_experiment(
                 cfg, df, model_id=model_id, feature_set=fset,
                 window=cfg.primary_window, seed=seed,
