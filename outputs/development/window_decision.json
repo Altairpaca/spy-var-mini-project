@@ -14,7 +14,6 @@
   "sensitivity_win_counts": {
     "1500": 24
   },
-  "mean_normalized_loss_clean": null,
   "raw_pinball_sum_winner": 1500,
   "disagreement": false,
   "rule": "min equal-weight mean of candidate-relative normalized loss; disagreement -> conservative longer window",
