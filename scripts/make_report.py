@@ -69,6 +69,8 @@ def _ablation_latex(metrics: pd.DataFrame) -> str:
 
 
 def _dm_latex(dm: pd.DataFrame) -> str:
+    BS = chr(92)
+    NL = chr(10)
     has_holm = "holm_dm_pvalue" in dm.columns
     rows = []
     for _, r in dm.iterrows():
@@ -76,12 +78,14 @@ def _dm_latex(dm: pd.DataFrame) -> str:
         head = "H" if int(r.get("headline", 0)) else ""
         rows.append(
             f"{r['model_a']} vs {r['model_b']} & {int(r['tail']*100)}\\% & {_fmt(r['dm_stat'])} & "
-            f"{_fmt(r['dm_pvalue'])}{holm_cell} & {_fmt(r['bootstrap_pvalue'])} & {r['favors']} & {head}\\\n"
+            f"{_fmt(r['dm_pvalue'])}{holm_cell} & {_fmt(r['bootstrap_pvalue'])} & {r['favors']} & {head}"
+            + BS + BS + NL
         )
-    holm_header = " & \\textbf{Holm p}" if has_holm else ""
-    return ("\\begin{tabular}{llrrrrrl}" + "\\n\\textbf{Pair} & \\textbf{Tail} & \\textbf{DM} & "
-            "\\textbf{DM p}" + holm_header + " & \\textbf{Boot p} & \\textbf{Favors} & \\textbf{Headline}\\\n"
-            + "".join(rows) + "\\end{tabular}")
+    holm_header = " & " + BS + BS + "textbf{Holm p}" if has_holm else ""
+    header = (BS + BS + 'textbf{Pair} & ' + BS + BS + 'textbf{Tail} & ' + BS + BS + 'textbf{DM} & '
+             + BS + BS + 'textbf{DM p}' + holm_header + ' & ' + BS + BS + 'textbf{Boot p} & '
+             + BS + BS + 'textbf{Favors} & ' + BS + BS + 'textbf{Headline}' + BS + BS + NL)
+    return BS + "begin{tabular}{llrrrrrl}" + NL + header + "".join(rows) + BS + "end{tabular}"
 def _regime_latex(regime: pd.DataFrame, primary: dict) -> str:
     m = regime.copy()
     m = m[m.apply(lambda r: primary.get(r["model"]) == r["feature_set"], axis=1)]

@@ -6,12 +6,13 @@
 \usepackage{multirow}
 \usepackage{caption}
 \usepackage{hyperref}
+\hypersetup{hidelinks}
 \captionsetup{font=small,labelfont=bf}
 \newcommand{\rot}[1]{\begin{turn}{0}#1\end{turn}}
 \usepackage{rotating}
 \title{One-Day-Ahead Value-at-Risk Forecasting for SPY\\[2mm]
 \large A Frozen Out-of-Sample Study of Historical Simulation, GARCH-t, HAR Quantile Regression, and Small Neural Quantile Models}
-\author{Research Mini-Project Report}
+\author{Altair Li}
 \date{\today}
 \begin{document}
 \maketitle
@@ -32,14 +33,46 @@ See Figures~\ref{fig:overview}--\ref{fig:rvbv}. Key features: volatility cluster
 Development period: all dates before 2008-01-01 (rolling-origin validation over 2005--2007, with a documented slight adjustment for the 1500-day window whose earliest feasible origin is late 2005). Final test: all dates from 2008-01-01. Candidate windows: 1000 and 1500 trading days only; the primary window is chosen from development evidence (see Section~\ref{sec:dev}). All models share the same forecast dates. The final configuration and data hash are frozen in \texttt{docs/FREEZE\_MANIFEST.md} before any final-test run; the gate is enforced by tests and scripts.
 
 \section{Models}
-\begin{itemize}
-\item \textbf{M0 -- Historical Simulation}: empirical window quantiles (non-parametric benchmark).
-\item \textbf{M1 -- GARCH(1,1)-$t$}: classical conditional volatility with Student-$t$ innovations; Gaussian-GARCH is used as a diagnostic only in development.
-\item \textbf{M2 -- Linear/HAR Quantile Regression}: direct pinball-optimized linear quantile regressions on the same feature sets as the MLP.
-\item \textbf{M3 -- Multi-Quantile MLP}: small MLP with joint pinball loss and a structurally non-crossing ordered output head ($q_{0.01}\le q_{0.05}\le q_{0.10}$ by construction).
-\item \textbf{M4 -- GJR-GARCH(1,1,1)-$t$}: leverage/asymmetry robustness extension.
-\item \textbf{M5 -- GRU Quantile}: small one-layer GRU on the last 22 daily feature vectors (sequence-model robustness extension).
-\end{itemize}
+\subsection{M0 -- Historical Simulation}
+The empirical quantile of the rolling-window returns: $\hat{q}_\alpha = \hat{F}_t^{-1}(\alpha)$ over $\{r_{t-W+1},\dots,r_t\}$. Non-parametric benchmark; implicitly assumes a stationary return distribution within the window, so regime shifts are absorbed only with a lag.
+
+\subsection{M1 -- GARCH(1,1)-Student-$t$}
+Classical conditional volatility model with conditional variance
+\begin{equation}
+\sigma_t^2 = \omega + \alpha\,\varepsilon_{t-1}^2 + \beta\,\sigma_{t-1}^2, \qquad \varepsilon_t = \sigma_t z_t,
+\end{equation}
+where $z_t$ is an i.i.d.\ unit-variance standardized Student-$t$ innovation with $\nu$ degrees of freedom (variance 1, so that $\mathrm{Var}(\varepsilon_t\mid\mathcal{F}_{t-1})=\sigma_t^2$). The one-day-ahead VaR is
+\begin{equation}
+\mathrm{VaR}_{\alpha,t+1} = \mu + F_t^{-1}(\alpha;\nu)\,\hat\sigma_{t+1},
+\end{equation}
+with $F_t^{-1}(\alpha;\nu)$ the quantile of the standardized Student-$t$ (implemented via \texttt{arch.univariate.StudentsT}, equal to $t_\nu^{-1}(\alpha)\sqrt{(\nu-2)/\nu}$); $\mu$ is a constant mean. Parameters are re-estimated by MLE on every rolling window.
+
+\subsection{M4 -- GJR-GARCH(1,1,1)-Student-$t$}
+Adds a leverage term to the variance recursion,
+\begin{equation}
+\sigma_t^2 = \omega + \alpha\,\varepsilon_{t-1}^2 + \gamma\,I(\varepsilon_{t-1}<0)\,\varepsilon_{t-1}^2 + \beta\,\sigma_{t-1}^2,
+\end{equation}
+capturing asymmetric responses of volatility to negative shocks; VaR construction identical to M1. Serves as the downside-asymmetry robustness extension.
+
+\subsection{M2 -- Linear / HAR Quantile Regression}
+Direct conditional quantile estimation by minimizing the pinball loss,
+\begin{equation}
+\hat{\beta}_\tau = \arg\min_\beta \sum_t \rho_\tau\big(y_{t+1} - x_t^\top\beta\big), \qquad \rho_\tau(u) = u\big(\tau - I(u<0)\big),
+\end{equation}
+fit separately for $\tau \in \{0.01, 0.05, 0.10\}$ on the same feature sets as the MLP (so the linear-vs-nonlinear contrast is not confounded by information). Independent fits may cross; the crossing rate is reported.
+
+\subsection{M3 -- Multi-Quantile MLP}
+A small MLP with joint pinball loss over the three tails and a structurally non-crossing head:
+\begin{equation}
+q_{0.01} = z_1, \qquad q_{0.05} = z_1 + \mathrm{softplus}(z_2), \qquad q_{0.10} = q_{0.05} + \mathrm{softplus}(z_3),
+\end{equation}
+so that $q_{0.01}\le q_{0.05}\le q_{0.10}$ holds by construction ($\mathrm{softplus}>0$). Targets are standardized with train-only statistics inside each rolling window and the affine transform is inverted on output (Scheme B, audit fix). Training uses early stopping on the last 10\% of the window in time order; scalers are fitted on training rows only.
+
+\subsection{M5 -- GRU Quantile}
+A one-layer GRU over the last 22 daily feature vectors with the same ordered head and loss. The role is a robustness extension: it tests whether an explicit sequence representation adds value beyond the structured HAR-style features already present, not a substitute for the MLP. Parameters are deliberately kept small.
+
+\subsection{Gaussian-GARCH diagnostic}
+GARCH(1,1) with Gaussian innovations is estimated only in development as a diagnostic reference.
 
 \section{Feature Engineering}
 Information sets (identical for M2 and M3, so Linear-vs-MLP differences are attributable to the mapping rather than the inputs): \textbf{F0} returns only (lags 1/2/5/22, abs, squared); \textbf{F1} adds $\log rv5$, $\sqrt{rv5}$, 5-day and 22-day HAR aggregations of $\log rv5$; \textbf{F2} adds the same block for $bv$; \textbf{F3} adds jump proxy $\max(rv5-bv,0)$, relative jump, and a 5-day downside-shock intensity. All features are causal by construction and verified by truncation-invariance tests.
@@ -51,10 +84,10 @@ A unified rolling engine controls window boundaries, feature cutoffs, preprocess
 Per model and tail: empirical failure rate, Kupiec unconditional coverage test, Christoffersen independence and conditional-coverage tests, mean pinball loss, quantile-crossing rate, violation clustering, Dynamic Quantile test (reported as an additional diagnostic), Diebold--Mariano tests and moving-block bootstrap for pairwise loss comparisons. Finite-sample caveats apply: the 1\% tail has very few expected violations even in a decade-long test, so coverage tests have low power and small numerical differences must not be over-read.
 
 \section{Development / Validation Results}\label{sec:dev}
-Window comparison table: \texttt{outputs/tables/window\_comparison.csv}. Decision rule (predeclared): choose the window with smaller total mean pinball across tails on common validation dates; if the relative difference is below 1\%, prefer 1500 trading days, because the longer window provides more effective tail observations for the 1\% quantile (roughly 10 vs 15 expected violations in the window) and hence more stable empirical quantiles, at the cost of slower regime adaptation. The short window adapts to volatility-regime changes faster; the long window is more stable at the 1\% tail. The primary window selected from development evidence is \textbf{\texttt{1500}}.
+Window comparison tables: \texttt{outputs/development/window\_selection.csv} and \texttt{window\_selection\_cells.csv}. Decision rule (predeclared, audit-fixed aggregation): per (model, feature-set, tail) cell the candidate-relative normalized loss (cell loss divided by the cell mean across the two candidates) is averaged with equal weight across all cells; per-cell winners, pairwise win counts and drop-one sensitivity are reported alongside. If the equal-weight aggregate and the raw pinball-sum aggregate disagree, the longer window is chosen conservatively for 1\% tail stability. The longer window provides more effective tail observations for the 1\% quantile (about 15 vs 10 expected violations) and hence more stable empirical quantiles, at the cost of slower regime adaptation; the short window adapts faster. The primary window selected from development evidence is \textbf{\texttt{1500}}.
 
 \section{Frozen Out-of-Sample Results}\label{sec:oos}
-All models evaluated on \texttt{1} identical forecast dates ($\ge$ 2008-01-01). Primary seed \texttt{42}. Table~\ref{tab:metrics} reports coverage and loss statistics.
+All models evaluated on \texttt{2640} identical forecast dates ($\ge$ 2008-01-01). Primary seed \texttt{42}. Table~\ref{tab:metrics} reports coverage and loss statistics.
 
 \begin{table}[ht]
 \centering
@@ -155,53 +188,53 @@ Seed robustness for the neural models (predeclared seeds 7, 42, 2026; headline s
 \begin{table}[ht]
 \centering
 \caption{Pairwise loss comparisons (negative DM favors model\_a).}\label{tab:dm}
-\begin{tabular}{llrrrl}
-\textbf{Pair} & \textbf{Tail} & \textbf{DM} & \textbf{DM p} & \textbf{Boot p} & \textbf{Favors}\\
-M0 vs M1 & 1\% & 3.7684 & 0.0002 & 0.1940 & b\\
-M0 vs M2 & 1\% & 2.0038 & 0.0451 & 0.1170 & b\\
-M0 vs M3 & 1\% & -4.5745 & 0.0000 & 0.1300 & a\\
-M0 vs M4 & 1\% & 3.9258 & 0.0001 & 0.1810 & b\\
-M0 vs M5 & 1\% & 1.2483 & 0.2119 & 0.5600 & b\\
-M1 vs M2 & 1\% & -1.9093 & 0.0562 & 0.3800 & a\\
-M1 vs M3 & 1\% & -5.0865 & 0.0000 & 0.1530 & a\\
-M1 vs M4 & 1\% & 2.0895 & 0.0367 & 0.0670 & b\\
-M1 vs M5 & 1\% & -9.8714 & 0.0000 & 0.0010 & a\\
-M2 vs M3 & 1\% & -4.7918 & 0.0000 & 0.1150 & a\\
-M2 vs M4 & 1\% & 2.0636 & 0.0391 & 0.3560 & b\\
-M2 vs M5 & 1\% & -0.1646 & 0.8693 & 0.9060 & a\\
-M3 vs M4 & 1\% & 5.1678 & 0.0000 & 0.1490 & b\\
-M3 vs M5 & 1\% & 3.9057 & 0.0001 & 0.2100 & b\\
-M4 vs M5 & 1\% & -10.8882 & 0.0000 & 0.0010 & a\\
-M0 vs M1 & 5\% & 4.3445 & 0.0000 & 0.0990 & b\\
-M0 vs M2 & 5\% & 4.7912 & 0.0000 & 0.0380 & b\\
-M0 vs M3 & 5\% & -3.9424 & 0.0001 & 0.1210 & a\\
-M0 vs M4 & 5\% & 4.5717 & 0.0000 & 0.0710 & b\\
-M0 vs M5 & 5\% & 3.5849 & 0.0003 & 0.0700 & b\\
-M1 vs M2 & 5\% & -0.8104 & 0.4177 & 0.5680 & a\\
-M1 vs M3 & 5\% & -4.7458 & 0.0000 & 0.1050 & a\\
-M1 vs M4 & 5\% & 3.0994 & 0.0019 & 0.0070 & b\\
-M1 vs M5 & 5\% & -1.5826 & 0.1135 & 0.1950 & a\\
-M2 vs M3 & 5\% & -4.7969 & 0.0000 & 0.1000 & a\\
-M2 vs M4 & 5\% & 1.5818 & 0.1137 & 0.3280 & b\\
-M2 vs M5 & 5\% & -0.7365 & 0.4614 & 0.4930 & a\\
-M3 vs M4 & 5\% & 4.8545 & 0.0000 & 0.1010 & b\\
-M3 vs M5 & 5\% & 4.7181 & 0.0000 & 0.1060 & b\\
-M4 vs M5 & 5\% & -2.3117 & 0.0208 & 0.0920 & a\\
-M0 vs M1 & 10\% & 4.3293 & 0.0000 & 0.0600 & b\\
-M0 vs M2 & 10\% & 4.9103 & 0.0000 & 0.0300 & b\\
-M0 vs M3 & 10\% & -4.2991 & 0.0000 & 0.1100 & a\\
-M0 vs M4 & 10\% & 4.5523 & 0.0000 & 0.0410 & b\\
-M0 vs M5 & 10\% & 2.1835 & 0.0290 & 0.1100 & b\\
-M1 vs M2 & 10\% & 0.1414 & 0.8876 & 0.9130 & b\\
-M1 vs M3 & 10\% & -4.7636 & 0.0000 & 0.0970 & a\\
-M1 vs M4 & 10\% & 2.9749 & 0.0029 & 0.0060 & b\\
-M1 vs M5 & 10\% & -2.8651 & 0.0042 & 0.0510 & a\\
-M2 vs M3 & 10\% & -4.8492 & 0.0000 & 0.0970 & a\\
-M2 vs M4 & 10\% & 0.7425 & 0.4578 & 0.5390 & b\\
-M2 vs M5 & 10\% & -3.3584 & 0.0008 & 0.0170 & a\\
-M3 vs M4 & 10\% & 4.8232 & 0.0000 & 0.0960 & b\\
-M3 vs M5 & 10\% & 4.6733 & 0.0000 & 0.1020 & b\\
-M4 vs M5 & 10\% & -3.3882 & 0.0007 & 0.0290 & a\\
+\begin{tabular}{llrrrrrl}
+\\textbf{Pair} & \\textbf{Tail} & \\textbf{DM} & \\textbf{DM p} & \\textbf{Boot p} & \\textbf{Favors} & \\textbf{Headline}\\
+M0 vs M1 & 1\% & 3.7684 & 0.0002 & 0.1940 & b & \\
+M0 vs M2 & 1\% & 2.0038 & 0.0451 & 0.1170 & b & \\
+M0 vs M3 & 1\% & -4.5745 & 0.0000 & 0.1300 & a & \\
+M0 vs M4 & 1\% & 3.9258 & 0.0001 & 0.1810 & b & \\
+M0 vs M5 & 1\% & 1.2483 & 0.2119 & 0.5600 & b & \\
+M1 vs M2 & 1\% & -1.9093 & 0.0562 & 0.3800 & a & \\
+M1 vs M3 & 1\% & -5.0865 & 0.0000 & 0.1530 & a & \\
+M1 vs M4 & 1\% & 2.0895 & 0.0367 & 0.0670 & b & \\
+M1 vs M5 & 1\% & -9.8714 & 0.0000 & 0.0010 & a & \\
+M2 vs M3 & 1\% & -4.7918 & 0.0000 & 0.1150 & a & \\
+M2 vs M4 & 1\% & 2.0636 & 0.0391 & 0.3560 & b & \\
+M2 vs M5 & 1\% & -0.1646 & 0.8693 & 0.9060 & a & \\
+M3 vs M4 & 1\% & 5.1678 & 0.0000 & 0.1490 & b & \\
+M3 vs M5 & 1\% & 3.9057 & 0.0001 & 0.2100 & b & \\
+M4 vs M5 & 1\% & -10.8882 & 0.0000 & 0.0010 & a & \\
+M0 vs M1 & 5\% & 4.3445 & 0.0000 & 0.0990 & b & \\
+M0 vs M2 & 5\% & 4.7912 & 0.0000 & 0.0380 & b & \\
+M0 vs M3 & 5\% & -3.9424 & 0.0001 & 0.1210 & a & \\
+M0 vs M4 & 5\% & 4.5717 & 0.0000 & 0.0710 & b & \\
+M0 vs M5 & 5\% & 3.5849 & 0.0003 & 0.0700 & b & \\
+M1 vs M2 & 5\% & -0.8104 & 0.4177 & 0.5680 & a & \\
+M1 vs M3 & 5\% & -4.7458 & 0.0000 & 0.1050 & a & \\
+M1 vs M4 & 5\% & 3.0994 & 0.0019 & 0.0070 & b & \\
+M1 vs M5 & 5\% & -1.5826 & 0.1135 & 0.1950 & a & \\
+M2 vs M3 & 5\% & -4.7969 & 0.0000 & 0.1000 & a & \\
+M2 vs M4 & 5\% & 1.5818 & 0.1137 & 0.3280 & b & \\
+M2 vs M5 & 5\% & -0.7365 & 0.4614 & 0.4930 & a & \\
+M3 vs M4 & 5\% & 4.8545 & 0.0000 & 0.1010 & b & \\
+M3 vs M5 & 5\% & 4.7181 & 0.0000 & 0.1060 & b & \\
+M4 vs M5 & 5\% & -2.3117 & 0.0208 & 0.0920 & a & \\
+M0 vs M1 & 10\% & 4.3293 & 0.0000 & 0.0600 & b & \\
+M0 vs M2 & 10\% & 4.9103 & 0.0000 & 0.0300 & b & \\
+M0 vs M3 & 10\% & -4.2991 & 0.0000 & 0.1100 & a & \\
+M0 vs M4 & 10\% & 4.5523 & 0.0000 & 0.0410 & b & \\
+M0 vs M5 & 10\% & 2.1835 & 0.0290 & 0.1100 & b & \\
+M1 vs M2 & 10\% & 0.1414 & 0.8876 & 0.9130 & b & \\
+M1 vs M3 & 10\% & -4.7636 & 0.0000 & 0.0970 & a & \\
+M1 vs M4 & 10\% & 2.9749 & 0.0029 & 0.0060 & b & \\
+M1 vs M5 & 10\% & -2.8651 & 0.0042 & 0.0510 & a & \\
+M2 vs M3 & 10\% & -4.8492 & 0.0000 & 0.0970 & a & \\
+M2 vs M4 & 10\% & 0.7425 & 0.4578 & 0.5390 & b & \\
+M2 vs M5 & 10\% & -3.3584 & 0.0008 & 0.0170 & a & \\
+M3 vs M4 & 10\% & 4.8232 & 0.0000 & 0.0960 & b & \\
+M3 vs M5 & 10\% & 4.6733 & 0.0000 & 0.1020 & b & \\
+M4 vs M5 & 10\% & -3.3882 & 0.0007 & 0.0290 & a & \\
 \end{tabular}
 \end{table}
 
@@ -216,17 +249,17 @@ M4 vs M5 & 10\% & -3.3882 & 0.0007 & 0.0290 & a\\
 \section{Conclusion}
 The conclusion is drawn from the frozen out-of-sample evidence in Section~\ref{sec:oos} and the analysis sections.
 
-At the 1\% tail, the best-calibrated model is MLP (failure rate 0.0098 vs target 0.01); the lowest mean pinball loss is achieved by GJR-t (0.00035).
+At the 1\% tail, the model with the empirical failure rate closest to the nominal level is MLP (0.0098 vs target 0.01); the lowest mean pinball loss is achieved by GJR-t (0.00035). Closeness of the unconditional failure frequency is not, by itself, evidence of adequate conditional VaR dynamics (see the coverage tests and the violation-clustering diagnostics below).
 
-At the 5\% tail, the best-calibrated model is HS (failure rate 0.0530 vs target 0.05); the lowest mean pinball loss is achieved by GJR-t (0.00126).
+At the 5\% tail, the model with the empirical failure rate closest to the nominal level is HS (0.0530 vs target 0.05); the lowest mean pinball loss is achieved by GJR-t (0.00126). Closeness of the unconditional failure frequency is not, by itself, evidence of adequate conditional VaR dynamics (see the coverage tests and the violation-clustering diagnostics below).
 
-At the 10\% tail, the best-calibrated model is HS (failure rate 0.0962 vs target 0.10); the lowest mean pinball loss is achieved by GJR-t (0.00205).
+At the 10\% tail, the model with the empirical failure rate closest to the nominal level is HS (0.0962 vs target 0.10); the lowest mean pinball loss is achieved by GJR-t (0.00205). Closeness of the unconditional failure frequency is not, by itself, evidence of adequate conditional VaR dynamics (see the coverage tests and the violation-clustering diagnostics below).
 
-The GARCH family (GARCH-t, GJR-t) achieves the lowest mean pinball loss (sharpness) at all three tails and the best tail calibration among conditional-volatility models, with no evidence of violation clustering at the 1% and 5% tails. Two calibration caveats: at the 5% and 10% tails the empirical failure rate of historical simulation is marginally closer to target (at the cost of far worse crisis-period coverage, e.g. 5% failure rate 15.7% vs 6.4% in 2008--2009), and the 10% conditional-coverage test is rejected for the GARCH family (CC p $<$ 0.01), so the GARCH calibration advantage is strongest at the extreme 1% tail.
+The GARCH family (GARCH-t, GJR-t) achieves the lowest mean pinball loss (sharpness) at all three tails and strong 1\% tail calibration (failure rates 0.0428 / 0.0424 vs 0.0530 for HS), with no evidence of violation clustering at the 1\% and 5\% tails. Two caveats: at the 5\% and 10\% tails HS is marginally closer to the nominal frequency (5\% tail 0.0530 vs 0.0428), and the 10\% conditional-coverage test is rejected for the GARCH family (CC p 0.0015 / 0.0021); crisis-period 5\% failure rates are 0.1567 (HS) vs 0.0635 (GARCH-t), documenting slow regime adaptation of historical simulation.
 
-The neural models do not outperform the classical baselines on this frozen panel: the MLP is significantly worse than both GARCH-t and the linear quantile model on the DM test at all tails (p $<$ 0.001), and the GRU is strongly over-conservative at the 1\% tail (failure rate 0.15\%). Seed robustness is high (small across-seed dispersion), so the primary-seed result is representative. This is a valid negative result: on this information set and window, nonlinear mapping does not add value.
+The neural models do not outperform the classical baselines on this frozen panel: the Holm-corrected DM p-values at the 5\% tail are 0.0000 (GARCH-t vs MLP) and 0.0000 (LinQR vs MLP); the GRU is strongly over-conservative at the 1\% tail (failure rate 0.0015). Across-seed dispersion is reported in the robustness section rather than summarized qualitatively here. This is a valid negative result on this information set and window.
 
-Feature ablations show modest incremental value of realized measures for the linear quantile model (F0 to F3 reduces mean pinball by roughly 3\%) and a larger relative improvement for the MLP, which nonetheless remains behind the linear baseline. Adding rv5/bv/jump information does not change the ranking.
+Feature ablations (F0 returns -> F3 full block) change mean pinball at the 5\% tail by LinQR: 3.5\%, MLP: 33.0\%; the realized-measure block adds information for the linear model and the MLP, but it does not change the model ranking. The F3 effect is attributed to the jump/downside feature block as a whole, not to any single component.
 
 \section{References}
 \begin{itemize}
