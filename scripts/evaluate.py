@@ -53,6 +53,21 @@ FINAL_MODELS = [
 ]
 
 
+def holm_adjust(pvals: np.ndarray) -> np.ndarray:
+    """Holm family-wise correction (step-down); returns adjusted p-values."""
+    p = np.asarray(pvals, dtype=float)
+    m = len(p)
+    if m == 0:
+        return p
+    order = np.argsort(p)
+    adj = np.empty(m)
+    running = 0.0
+    for rank, idx in enumerate(order):
+        running = max(running, (m - rank) * p[idx])
+        adj[idx] = min(running, 1.0)
+    return adj
+
+
 def load_final_panels(out_root: Path) -> pd.DataFrame:
     pred_dir = out_root / "predictions"
     frames = []
@@ -180,6 +195,9 @@ def main() -> None:
     ]
     models = sorted(keep["model_id"].unique())
     boot_cfg = cfg.section("evaluation").get("bootstrap", {"B": 999, "block": 60})
+    # 预声明 headline 对比族（审计修复）：这些是正式假设检验，
+    # 其余两两对比仅作 exploratory appendix。
+    headline_pairs = {("M1", "M3"), ("M2", "M3"), ("M3", "M5"), ("M1", "M4")}
     for alpha in cfg.tails:
         for a in models:
             for b in models:
@@ -208,20 +226,38 @@ def main() -> None:
                     "bootstrap_pvalue": bb["pvalue"],
                     "pinball_a": float(la[valid].mean()), "pinball_b": float(lb[valid].mean()),
                     "favors": "a" if float(la[valid].mean()) < float(lb[valid].mean()) else "b",
+                    "headline": int((a, b) in headline_pairs),
+                    "holm_dm_pvalue": np.nan,
                 })
-    pd.DataFrame(cmp_rows).to_csv(out_root / "tables" / "dm_comparison.csv", index=False)
+    dm_df = pd.DataFrame(cmp_rows)
+    # Holm family-wise correction within each tail for headline pairs (audit fix)
+    if len(dm_df):
+        for alpha in cfg.tails:
+            sel = dm_df["tail"] == alpha
+            head = dm_df[sel & (dm_df["headline"] == 1)]
+            if len(head):
+                adjusted = holm_adjust(head["dm_pvalue"].to_numpy(dtype=float))
+                dm_df.loc[head.index, "holm_dm_pvalue"] = adjusted
+    dm_df.to_csv(out_root / "tables" / "dm_comparison.csv", index=False)
 
-    # seed 稳健性
+    # seed 稳健性：robustness runs {7, 2026} + primary seed 42 面板 => n_seeds = 3
     rob = load_robustness_panels(out_root)
+    rob_rows = []
     if len(rob):
-        rob_rows = []
         for (model, fset, seed), g in rob.groupby(["model_id", "feature_set", "seed"]):
             for alpha in cfg.tails:
-                m = _metric_row(g, alpha, model, fset, f"rob-{model}-{fset}-s{seed}")
-                rob_rows.append(m)
+                rob_rows.append(_metric_row(g, alpha, model, fset, f"rob-{model}-{fset}-s{seed}"))
+    for model in ("M3", "M5"):
+        for alpha in cfg.tails:
+            key = (panels["model_id"] == model) & (panels["feature_set"] == "F3")
+            g = panels[key]
+            if not len(g):
+                continue
+            rob_rows.append(_metric_row(g, alpha, model, "F3", f"primary-{model}-F3-s{cfg.primary_seed}"))
+    if rob_rows:
         pd.DataFrame(rob_rows).to_csv(out_root / "tables" / "seed_robustness.csv", index=False)
-        # mean/std 汇总（主 seed 42 的面板单独保留）
         summ = pd.DataFrame(rob_rows).groupby(["model", "feature_set", "tail"]).agg(
+            n_seeds=("seed", "count"),
             failure_rate_mean=("failure_rate", "mean"),
             failure_rate_std=("failure_rate", "std"),
             pinball_mean=("mean_pinball", "mean"),

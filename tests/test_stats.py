@@ -78,6 +78,36 @@ def test_dm_test_rejects_constant_difference():
     assert out["pvalue"] < 0.001
 
 
+def test_holm_adjust_monotone_and_bounded():
+    """Holm adjusted p-values are monotone in raw order and bounded by 1."""
+    from scripts.evaluate import holm_adjust
+
+    pvals = np.array([0.001, 0.02, 0.03, 0.2, 0.4])
+    adj = holm_adjust(pvals)
+    assert np.all(adj >= pvals)
+    assert np.all(adj <= 1.0)
+    assert adj[0] == 5 * 0.001  # smallest gets m * p
+    assert adj[1] == 4 * 0.02
+    # order preserved
+    assert list(adj) == sorted(adj)
+
+
+def test_holm_adjust_single_value():
+    from scripts.evaluate import holm_adjust
+
+    assert holm_adjust(np.array([0.02])) == [0.02]
+    assert holm_adjust(np.array([])).size == 0
+
+
+def test_holm_adjust_rejects_when_any_below_threshold():
+    """A family where the smallest p survives Holm at 5% stays significant."""
+    from scripts.evaluate import holm_adjust
+
+    pvals = np.array([0.001, 0.2, 0.3, 0.4])
+    adj = holm_adjust(pvals)
+    assert adj[0] < 0.05
+
+
 def test_kupiec_rejects_perfect_coverage():
     """在 5% 水平违例率 15% 时，LR_uc 应显著。"""
     _, p = kupiec_lr(150, 1000, 0.05)
