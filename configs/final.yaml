@@ -87,10 +87,9 @@ models:
     enabled: true
     hidden:
     - 32
-    - 32
     dropout: 0.0
     lr: 0.001
-    weight_decay: 0.0001
+    weight_decay: 0.0
     batch_size: 128
     epochs: 300
     patience: 30
@@ -104,7 +103,7 @@ models:
     layers: 1
     seq_len: 22
     lr: 0.001
-    weight_decay: 0.0001
+    weight_decay: 0.0
     batch_size: 64
     epochs: 300
     patience: 30

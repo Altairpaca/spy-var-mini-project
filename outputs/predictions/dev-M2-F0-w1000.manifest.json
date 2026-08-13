@@ -1,0 +1,56 @@
+{
+  "experiment_id": "dev-M2-F0-w1000",
+  "model_id": "M2",
+  "feature_set": "F0",
+  "window": 1000,
+  "seed": 42,
+  "config_sha256": "23553dc12cf4b5fc38ea9cf999532052f8d007a8ff8fdba77af054d5fa185e7d",
+  "config_path": "configs/development.yaml",
+  "git_commit": "a8613e5084404834819e30edbefb8a34577121c5",
+  "device": "cpu",
+  "workers": 32,
+  "runtime_seconds": 1.6514196670614183,
+  "n_forecasts": 498,
+  "date_range": [
+    "2006-01-09 00:00:00",
+    "2007-12-31 00:00:00"
+  ],
+  "created_at": "2026-08-13T10:54:14+0800",
+  "packages": {
+    "python": "3.11.15",
+    "numpy": "2.4.6",
+    "pandas": "2.3.3",
+    "scipy": "1.17.1",
+    "statsmodels": "0.14.6",
+    "arch": "7.2.0",
+    "scikit-learn": "1.9.0",
+    "torch": "2.13.0+cpu",
+    "matplotlib": "3.11.1"
+  },
+  "python_version": "3.11.15",
+  "platform": "Linux-7.0.0-28-generic-x86_64-with-glibc2.43",
+  "fit_failures": 0,
+  "feature_set_names": [
+    "lag_ret_1",
+    "lag_ret_2",
+    "lag_ret_5",
+    "lag_ret_22",
+    "abs_ret_1",
+    "sq_ret_1",
+    "abs_ret_5d"
+  ],
+  "experiment_signature": {
+    "data_sha256": "277406a832c1418de30221396bd8dbf12a444c3f5430ad88c7cc75d7a7f573a3",
+    "config_sha256": "23553dc12cf4b5fc38ea9cf999532052f8d007a8ff8fdba77af054d5fa185e7d",
+    "git_commit": "a8613e5084404834819e30edbefb8a34577121c5",
+    "code_signature": "c11b3c8bf7a4ee715e1fea6050828c32b0f118f1164199821bfca591d595488b",
+    "model_id": "M2",
+    "feature_set": "F0",
+    "window": 1000,
+    "seed": 42,
+    "target_date_range": [
+      "2006-01-09 00:00:00",
+      "2007-12-31 00:00:00"
+    ]
+  }
+}

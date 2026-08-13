@@ -21,11 +21,19 @@ venv/
 Thumbs.db
 
 # Local raw data and generated outputs
-# Keep assignment data local unless explicitly approved for repository storage.
+# The audited submission intentionally commits the raw data file and the
+# formal outputs (predictions/tables/figures/manifests/development/runs).
 data/raw/*
 !data/raw/.gitkeep
+!data/raw/spy_data.csv
 outputs/*
 !outputs/.gitkeep
+!outputs/predictions/
+!outputs/tables/
+!outputs/figures/
+!outputs/manifests/
+!outputs/development/
+!outputs/runs/
 
 # Large model/checkpoint artifacts
 *.pt

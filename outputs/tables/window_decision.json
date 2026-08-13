@@ -1,0 +1,10 @@
+{
+  "window_pinball_sum": {
+    "1000": 0.024308220549159185,
+    "1500": 0.023382254103905868
+  },
+  "relative_diff": 0.03960124807208557,
+  "rule": "min_sum_pinball; tie-break (rel diff < 1%) -> 1500",
+  "chosen_window": 1500,
+  "note": "基于 development 证据；覆盖率为诊断列。"
+}
