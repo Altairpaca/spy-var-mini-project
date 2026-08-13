@@ -25,13 +25,16 @@ This report studies one-day-ahead Value-at-Risk (VaR) forecasting for SPY log re
 For each forecast origin $t$ we predict the conditional return quantile $q_{\alpha,t+1}$ with $P(r_{t+1}\le q_{\alpha,t+1}\mid\mathcal{F}_t)=\alpha$ for $\alpha\in\{0.01,0.05,0.10\}$, using only information available at the end of day $t$. A violation is defined as $r_{t+1}\le \hat{q}_{\alpha,t+1}$ (VaR is the return quantile itself; lower-tail values are typically negative).
 
 \section{Data}
-Daily SPY observations with columns \texttt{log\_ret}, \texttt{rv5} (5-minute realized variance) and \texttt{bv} (bipower variation). See Appendix~\ref{sec:audit} for the machine-generated data audit.
+Daily SPY observations with columns \texttt{log\_ret}, \texttt{rv5} and \texttt{bv}. \texttt{rv5} is the realized-volatility measure provided with the assignment; its numerical scale in this sample is variance-like (so that $\sqrt{\texttt{rv5}}$ is close to the daily volatility scale), which motivates considering both $\log(\texttt{rv5})$ and $\sqrt{\texttt{rv5}}$ as structured predictors. \texttt{bv} is the bipower-variation counterpart of the same realized-measure family. See Appendix~\ref{sec:audit} for the machine-generated data audit.
 
 \section{Exploratory Analysis}
 See Figures~\ref{fig:overview}--\ref{fig:rvbv}. Key features: volatility clustering, heavy tails (excess kurtosis), strong persistence of log realized measures, and a positive link between negative returns and next-day volatility.
 
 \section{Experimental Protocol}
 Development period: all dates before 2008-01-01 (rolling-origin validation over 2005--2007, with a documented slight adjustment for the 1500-day window whose earliest feasible origin is late 2005). Final test: all dates from 2008-01-01. Candidate windows: 1000 and 1500 trading days only; the primary window is chosen from development evidence (see Section~\ref{sec:dev}). All models share the same forecast dates. The final configuration and data hash are frozen in \texttt{docs/FREEZE\_MANIFEST.md} before any final-test run; the gate is enforced by tests and scripts.
+
+\section{Computational Setup}
+All experiments were run under Python 3.11.15 with 32 process workers and BLAS/OpenMP threads limited to one per worker. All reported final models were executed on cpu; the neural models are deliberately small. The 12 primary frozen panels required 1699 seconds in aggregate, with the most expensive individual specification being M5 (about 812 s). Package versions and per-experiment runtimes are recorded in the prediction manifests (../outputs/runs/e34928235ed6-058d5aea/predictions/*.manifest.json).
 
 \section{Models}
 \subsection{M0 -- Historical Simulation}
@@ -214,6 +217,9 @@ M3 vs M5 & 10\% & -0.6926 & 0.4886 & 0.4886 & 0.6990 & a & H\\
 \item DM/block-bootstrap inference at extreme tails relies on asymptotic approximations; results are interpreted as indicative.
 \end{itemize}
 
+\section{Potential Improvements}
+Potential extensions include refitting the neural models on the full rolling window after selecting the stopping epoch, evaluating external validity on additional liquid assets, and considering more specialized dynamic quantile models (e.g., CAViaR-type specifications). These are deliberately left for future work: introducing them after inspecting the frozen test would violate the model-selection protocol followed in this study.
+
 \section{Conclusion}
 The conclusion is drawn from the frozen out-of-sample evidence in Section~\ref{sec:oos} and the analysis sections.
 
@@ -315,7 +321,7 @@ All prediction panels: \path{../outputs/runs/e34928235ed6-058d5aea/predictions/*
 \end{figure}
 \begin{figure}[ht]
 \centering\includegraphics[width=\textwidth]{../outputs/runs/e34928235ed6-058d5aea/figures/fig02_rv_bv.png}
-\caption{Realized variance and bipower variation (log scale).}\label{fig:rvbv}
+\caption{Realized-volatility measure and bipower variation (log scale).}\label{fig:rvbv}
 \end{figure}
 \begin{figure}[ht]
 \centering\includegraphics[width=\textwidth]{../outputs/runs/e34928235ed6-058d5aea/figures/fig03_var_curves.png}

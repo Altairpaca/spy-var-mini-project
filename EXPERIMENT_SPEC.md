@@ -75,7 +75,7 @@ rv5/bv 尺度、sqrt(rv5) 合理性、RV/BV 相关、自相关、jump 分布、�
 
 ## 10. Primary comparison rules
 - 所有模型在同一冻结日期集上比较（common-panel 测试强制）。
-- 逐 tail 排名；区分校准与 sharpness（pinball）。
+- 逐 tail 排名；区分校准与分位数预测损失（proper quantile loss，pinball）。
 - 负结果有效：不要求神经网络胜出。
 
 ## 11. Final-test freeze checklist（完成即冻结）
