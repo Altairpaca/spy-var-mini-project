@@ -19,11 +19,14 @@ NAME = {"M0": "HS", "M1": "GARCH-t", "M2": "LinQR", "M3": "MLP", "M4": "GJR-t", 
 
 
 def _load(out_root: Path):
+    from scripts.common import canonical_run_dir
+
+    run_dir = canonical_run_dir(out_root)
     return (
-        pd.read_csv(out_root / "tables" / "metrics.csv"),
-        pd.read_csv(out_root / "tables" / "dm_comparison.csv"),
-        pd.read_csv(out_root / "tables" / "regime_metrics.csv"),
-        pd.read_csv(out_root / "tables" / "ablation.csv"),
+        pd.read_csv(run_dir / "tables" / "metrics.csv"),
+        pd.read_csv(run_dir / "tables" / "dm_comparison.csv"),
+        pd.read_csv(run_dir / "tables" / "regime_metrics.csv"),
+        pd.read_csv(run_dir / "tables" / "ablation.csv"),
     )
 
 
