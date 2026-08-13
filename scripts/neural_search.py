@@ -53,7 +53,16 @@ def main() -> None:
     out_root = Path(args.out_root)
     dev_dir = out_root / "development"
     dev_dir.mkdir(parents=True, exist_ok=True)
-    search_window = min(cfg.window_candidates)
+    # 协议修复（correction/final-pass）：搜索必须在窗口选择之后、
+    # 在 development 选定的窗口上执行（不再用候选中的较小者）。
+    decision_path = dev_dir / "window_decision.json"
+    if decision_path.exists():
+        decision = json.loads(decision_path.read_text(encoding="utf-8"))
+        search_window = int(decision["chosen_window"])
+        print(f"neural search window: {search_window} (from window_decision.json)")
+    else:
+        search_window = min(cfg.window_candidates)
+        print(f"WARNING: window_decision.json missing; fallback to min candidate {search_window}")
 
     all_rows = []
     best_by_model = {}
