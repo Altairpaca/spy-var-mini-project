@@ -67,7 +67,14 @@ def _ablation_latex(metrics: pd.DataFrame) -> str:
                         f"{model}-{fset} & {int(tail*100)}\\% & {_fmt(r['failure_rate'])} & "
                         f"{_fmt(r['mean_pinball'])}\\\\\n"
                     )
-    return "\\begin{tabular}{llrr}\n\\textbf{Model} & \\textbf{Tail} & \\textbf{Rate} & \\textbf{Pinball}\\\\\n" + "".join(rows) + "\\end{tabular}"
+    return (
+        "\\begin{tabular}{llrr}\n"
+        "\\hline\n"
+        "\\textbf{Model} & \\textbf{Tail} & \\textbf{Rate} & \\textbf{Pinball}\\\\\n"
+        "\\hline\n"
+        + "".join(rows)
+        + "\\hline\n\\end{tabular}"
+    )
 
 
 def _dm_latex(dm: pd.DataFrame, headline_only: bool = False) -> str:
@@ -94,7 +101,15 @@ def _dm_latex(dm: pd.DataFrame, headline_only: bool = False) -> str:
     header = (BS + 'textbf{Pair} & ' + BS + 'textbf{Tail} & ' + BS + 'textbf{DM} & '
              + BS + 'textbf{DM p}' + holm_header + ' & ' + BS + 'textbf{Boot p} & '
              + BS + 'textbf{Favors} & ' + BS + 'textbf{Headline}' + BS + BS + NL)
-    return BS + "footnotesize" + BS + "begin{tabular}{llrrrrrl}" + NL + header + "".join(rows) + BS + "end{tabular}"
+    return (
+        BS + "footnotesize" + BS + "begin{tabular}{llrrrrrl}" + NL
+        + BS + "hline" + NL
+        + header
+        + BS + "hline" + NL
+        + "".join(rows)
+        + BS + "hline" + NL
+        + BS + "end{tabular}"
+    )
 
 def _regime_latex(regime: pd.DataFrame, primary: dict) -> str:
     m = regime.copy()
@@ -107,7 +122,17 @@ def _regime_latex(regime: pd.DataFrame, primary: dict) -> str:
     for reg in pivot.index:
         cells = " & ".join(f"{_fmt(v)}" for v in pivot.loc[reg])
         rows.append(reg.replace(chr(95), chr(92) + chr(95)) + " & " + cells + chr(92) + chr(92) + chr(10))
-    return chr(92) + "begin{tabular}{l" + "r" * len(pivot.columns) + "}" + chr(10) + chr(92) + "textbf{Regime} & " + labels + chr(92) + chr(92) + chr(10) + "".join(rows) + chr(92) + "end{tabular}"
+    BS = chr(92)
+    NL = chr(10)
+    return (
+        BS + "begin{tabular}{l" + "r" * len(pivot.columns) + "}" + NL
+        + BS + "hline" + NL
+        + BS + "textbf{Regime} & " + labels + BS + BS + NL
+        + BS + "hline" + NL
+        + "".join(rows)
+        + BS + "hline" + NL
+        + BS + "end{tabular}"
+    )
 def _conclusion_latex(metrics, dm, regime):
     """Data-driven conclusion; every number read from frozen tables.
 
@@ -315,7 +340,7 @@ def build_latex(cfg, out_root: Path, freeze: dict | None, audit: dict | None) ->
 \usepackage{rotating}
 \title{One-Day-Ahead Value-at-Risk Forecasting for SPY\\[2mm]
 \large A Frozen Out-of-Sample Study of Historical Simulation, GARCH-t, HAR Quantile Regression, and Small Neural Quantile Models}
-\author{Altair Li}
+\author{Zhenzhuo Li}
 \date{\today}
 \begin{document}
 \maketitle
